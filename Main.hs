@@ -13,6 +13,7 @@ height = 465 -- 31 * 15
 offset = 100
 tilesHorizontal = 30
 tileSize = 15
+pacmanInitialPos = (tileSize/2, -8*tileSize)
 window = InWindow "Pacman" (width, height) (offset, offset)
 background = black
 
@@ -49,7 +50,7 @@ renderTile 'x' x y = translate x y $ color blue $ rectangleSolid (tileSize-1) (t
 renderTile '+' x y = translate x y $ color white $ rectangleSolid (tileSize-1) 2
 renderTile '.' x y = translate x y $ color yellow $ circleSolid 2
 renderTile 'o' x y = translate x y $ color yellow $ circleSolid 4
-renderTile 'p' x y = translate x y $ color orange $ circleSolid (tileSize/2-1)
+--renderTile 'p' x y = translate x y $ color orange $ circleSolid (tileSize/2-1)
 renderTile _ _ _ = blank
 
 -- Event handling
@@ -74,7 +75,7 @@ initTiles = do
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = (0, 0) }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos }
   print rows
   hClose handle
   return initialState
