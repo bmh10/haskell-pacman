@@ -7,9 +7,11 @@ import System.IO
 import Control.Monad
 
 fps = 60
-width = 600
-height = 400
+topLeft = (-fromIntegral width/2 + tileSize/2, fromIntegral height/2 - tileSize/2)
+width = 420 -- 28 * 15
+height = 465 -- 31 * 15
 offset = 100
+tilesHorizontal = 30
 tileSize = 15
 window = InWindow "Pacman" (width, height) (offset, offset)
 background = black
@@ -27,11 +29,11 @@ render game
   | otherwise       = renderGame game
 
 renderGame :: PacmanGame -> IO Picture
-renderGame game = return $ renderLines (level game) (200)
+renderGame game = return $ renderLines (level game) (snd topLeft)
 
 renderLines :: [String] -> Float -> Picture
 renderLines [] _ = blank
-renderLines (l:ls) y = pictures [renderLine l (-300) y, renderLines ls (y-tileSize)]
+renderLines (l:ls) y = pictures [renderLine l (fst topLeft) y, renderLines ls (y-tileSize)]
 
 renderLine :: String -> Float -> Float -> Picture
 renderLine [] _ _      = blank
@@ -39,6 +41,7 @@ renderLine (t:ts) x y  = pictures [renderTile t x y, renderLine ts (x+tileSize) 
 
 renderTile :: Char -> Float -> Float -> Picture
 renderTile 'x' x y = translate x y $ color blue $ rectangleSolid (tileSize-1) (tileSize-1)
+renderTile '+' x y = translate x y $ color white $ rectangleSolid (tileSize-1) 2
 renderTile '.' x y = translate x y $ color yellow $ circleSolid 2
 renderTile 'o' x y = translate x y $ color yellow $ circleSolid 4
 renderTile _ _ _ = blank
