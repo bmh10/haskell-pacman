@@ -10,7 +10,7 @@ fps = 60
 width = 600
 height = 400
 offset = 100
-tileSize = 30
+tileSize = 15
 window = InWindow "Pacman" (width, height) (offset, offset)
 background = black
 
@@ -22,30 +22,26 @@ data PacmanGame = Game
     level :: [String]
   } deriving Show 
 
-initialState :: PacmanGame
-initialState = Game
-  { 
-    level = ["11111", "01110", "11111"]
-  }
-
 render :: PacmanGame -> IO Picture 
 render game
   | otherwise       = renderGame game
 
 renderGame :: PacmanGame -> IO Picture
-renderGame game = return $ renderLines (level initialState) 0
+renderGame game = return $ renderLines (level game) (200)
 
 renderLines :: [String] -> Float -> Picture
 renderLines [] _ = blank
-renderLines (l:ls) y = pictures [renderLine l 0 y, renderLines ls (y-tileSize)]
+renderLines (l:ls) y = pictures [renderLine l (-300) y, renderLines ls (y-tileSize)]
 
 renderLine :: String -> Float -> Float -> Picture
 renderLine [] _ _      = blank
 renderLine (t:ts) x y  = pictures [renderTile t x y, renderLine ts (x+tileSize) y]
 
 renderTile :: Char -> Float -> Float -> Picture
-renderTile '0' _ _ = blank
-renderTile '1' x y = translate x y $ color red $ rectangleSolid (tileSize-1) (tileSize-1)
+renderTile 'x' x y = translate x y $ color blue $ rectangleSolid (tileSize-1) (tileSize-1)
+renderTile '.' x y = translate x y $ color yellow $ circleSolid 2
+renderTile 'o' x y = translate x y $ color yellow $ circleSolid 4
+renderTile _ _ _ = blank
 
 -- Event handling
 handleKeys :: Event -> PacmanGame -> IO PacmanGame
@@ -55,14 +51,16 @@ handleKeys _ game = return game
 update :: Float -> PacmanGame -> IO PacmanGame
 update seconds game = return game
 
+-- Not sure why print is required...
 initTiles = do 
-  handle <- openFile "1.lvl" ReadMode
+  handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
-  let singlewords = words contents
-  return $ initialState {level = ["00100", "01110", "11111"]}
-  print singlewords
+  let rows = words contents
+  let initialState = Game { level = rows }
+  print rows
   hClose handle
+  return initialState
 
 main = do
-  initTiles
+  initialState <- initTiles
   playIO window background fps initialState render handleKeys update
