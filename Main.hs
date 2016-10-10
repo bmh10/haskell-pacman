@@ -6,22 +6,26 @@ import Graphics.Gloss.Interface.Pure.Game
 import System.IO  
 import Control.Monad
 
-fps = 60
+fps = 5
 width = 420 -- 28 * 15
 height = 465 -- 31 * 15
 offset = 100
 tileSize = 15
 pacmanInitialPos = (1,1)
+pacmanInitialDir = East
 window = InWindow "Pacman" (width, height) (offset, offset)
 background = black
 
 type Radius = Float 
 type Position = (Float, Float)
 
+data Direction = North | East | South | West deriving (Enum, Eq, Show)
+
 data PacmanGame = Game
   { 
     level :: [String],      -- Level layout
-    pacmanPos :: (Int, Int) -- Tile coord of pacman
+    pacmanPos :: (Int, Int), -- Tile coord of pacman
+    pacmanDir :: Direction  -- Pacman's direction of travel
   } deriving Show 
 
 -- Tile functions
@@ -64,11 +68,22 @@ renderTile c x y
 
 -- Event handling
 handleKeys :: Event -> PacmanGame -> PacmanGame
-handleKeys (EventKey (Char 'd') Down _ _) game = move game 1 0
-handleKeys (EventKey (Char 'a') Down _ _) game = move game (-1) 0
-handleKeys (EventKey (Char 'w') Down _ _) game = move game 0 (-1)
-handleKeys (EventKey (Char 's') Down _ _) game = move game 0 1
+handleKeys (EventKey (Char 'd') Down _ _) game = game { pacmanDir = East }
+handleKeys (EventKey (Char 'a') Down _ _) game = game { pacmanDir = West }
+handleKeys (EventKey (Char 'w') Down _ _) game = game { pacmanDir = North }
+handleKeys (EventKey (Char 's') Down _ _) game = game { pacmanDir = South }
 handleKeys _ game = game
+
+update :: Float -> PacmanGame -> PacmanGame
+update seconds game = updatePacman seconds game
+
+updatePacman :: Float -> PacmanGame -> PacmanGame
+updatePacman s g
+ | dir == East  = move g 1 0
+ | dir == West  = move g (-1) 0
+ | dir == North = move g 0 (-1)
+ | dir == South = move g 0 1
+   where dir = pacmanDir g
 
 move game xm ym = game {pacmanPos = (x', y')}
   where
@@ -76,15 +91,12 @@ move game xm ym = game {pacmanPos = (x', y')}
     x' = if getTile game (x+xm) y == 'x' then x else x + xm
     y' = if getTile game x (y+ym) == 'x' then y else y + ym
 
-update :: Float -> PacmanGame -> PacmanGame
-update seconds game = game
-
 -- Not sure why print is required...
 initTiles = do 
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir }
   print rows
   hClose handle
   return initialState
