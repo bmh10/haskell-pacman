@@ -11,6 +11,7 @@ width = 420 -- 28 * 15
 height = 465 -- 31 * 15
 offset = 100
 tileSize = 15
+maxTileHoriz = 27
 pacmanInitialPos = (1,1)
 pacmanInitialDir = East
 window = InWindow "Pacman" (width, height) (offset, offset)
@@ -88,8 +89,13 @@ updatePacman s g
 move game xm ym = game {pacmanPos = (x', y')}
   where
     (x, y) = pacmanPos game
-    x' = if getTile game (x+xm) y == 'x' then x else x + xm
+    x' = if getTile game (wrapx $ x+xm) y == 'x' then x else wrapx $ x + xm
     y' = if getTile game x (y+ym) == 'x' then y else y + ym
+
+wrapx pos
+ | pos < 0 = maxTileHoriz
+ | pos > maxTileHoriz = 0
+ | otherwise = pos
 
 -- Not sure why print is required...
 initTiles = do 
