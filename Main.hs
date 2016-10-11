@@ -26,7 +26,8 @@ data PacmanGame = Game
   { 
     level :: [String],      -- Level layout
     pacmanPos :: (Int, Int), -- Tile coord of pacman
-    pacmanDir :: Direction  -- Pacman's direction of travel
+    pacmanDir :: Direction,  -- Pacman's direction of travel
+    score :: Int
   } deriving Show 
 
 -- Tile functions
@@ -39,12 +40,15 @@ tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/
 
 -- Rendering
 render :: PacmanGame -> Picture 
-render g = pictures [renderLevel g, renderPacman g]
+render g = pictures [renderLevel g, renderPacman g, renderScore g]
 
 renderPacman :: PacmanGame -> Picture 
 renderPacman game = translate x y $ color orange $ circleSolid (tileSize/2-1)
   where 
     (x, y) = tileToCoord $ pacmanPos game
+
+renderScore :: PacmanGame -> Picture
+renderScore g = color white $ scale 0.1 0.1 $ text $ show $ score g 
 
 renderLevel :: PacmanGame -> Picture
 renderLevel game = renderLines (level game) 0
@@ -76,10 +80,17 @@ handleKeys (EventKey (Char 's') Down _ _) game = game { pacmanDir = South }
 handleKeys _ game = game
 
 update :: Float -> PacmanGame -> PacmanGame
-update seconds game = updatePacman seconds game
+update seconds game = updateScore $ updatePacman game
 
-updatePacman :: Float -> PacmanGame -> PacmanGame
-updatePacman s g
+updateScore :: PacmanGame -> PacmanGame
+updateScore g = 
+  if getTile g x y == '.' then g { score = s+1 } else g 
+  where
+    (x, y) = pacmanPos g
+    s = score g
+
+updatePacman :: PacmanGame -> PacmanGame
+updatePacman g
  | dir == East  = move g 1 0
  | dir == West  = move g (-1) 0
  | dir == North = move g 0 (-1)
@@ -102,7 +113,7 @@ initTiles = do
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, score = 0 }
   print rows
   hClose handle
   return initialState
