@@ -34,6 +34,11 @@ data PacmanGame = Game
 getTile :: PacmanGame -> Int -> Int -> Char
 getTile g x y = (level g) !! y !! x
 
+setTile :: Int -> Int -> Char -> PacmanGame -> PacmanGame
+setTile x y c g = g {level = updatedLevel}
+  where 
+    updatedLevel = take y (level g) ++ [take x ((level g) !! y) ++ [c] ++ drop (x+1) ((level g) !! y)] ++ drop (y+1) (level g)
+
 -- Map tile coords ((0,0) is top-left tile) to actual screen coords ((0, 0) is center of screen)
 tileToCoord :: (Int, Int) -> Position 
 tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/2, fromIntegral height/2 - fromIntegral y*tileSize - tileSize/2)
@@ -84,7 +89,7 @@ update seconds game = updateScore $ updatePacman game
 
 updateScore :: PacmanGame -> PacmanGame
 updateScore g = 
-  if getTile g x y == '.' then g { score = s+1 } else g 
+  if getTile g x y == '.' then setTile x y '_' $ g { score = s+1 } else g 
   where
     (x, y) = pacmanPos g
     s = score g
