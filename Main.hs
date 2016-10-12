@@ -31,8 +31,8 @@ data PacmanGame = Game
   } deriving Show 
 
 -- Tile functions
-getTile :: PacmanGame -> Int -> Int -> Char
-getTile g x y = (level g) !! y !! x
+getTile :: Int -> Int -> PacmanGame -> Char
+getTile x y g = (level g) !! y !! x
 
 setTile :: Int -> Int -> Char -> PacmanGame -> PacmanGame
 setTile x y c g = g {level = updatedLevel}
@@ -88,11 +88,15 @@ update :: Float -> PacmanGame -> PacmanGame
 update seconds game = updateScore $ updatePacman game
 
 updateScore :: PacmanGame -> PacmanGame
-updateScore g = 
-  if getTile g x y == '.' then setTile x y '_' $ g { score = s+1 } else g 
+updateScore g
+  | tile == '.' = setBlankTile $ g { score = s+1 }
+  | tile == 'o' = setBlankTile $ g { score = s+10 }
+  | otherwise = g
   where
     (x, y) = pacmanPos g
     s = score g
+    tile = getTile x y g
+    setBlankTile = setTile x y '_'
 
 updatePacman :: PacmanGame -> PacmanGame
 updatePacman g
@@ -105,8 +109,8 @@ updatePacman g
 move game xm ym = game {pacmanPos = (x', y')}
   where
     (x, y) = pacmanPos game
-    x' = if getTile game (wrapx $ x+xm) y == 'x' then x else wrapx $ x + xm
-    y' = if getTile game x (y+ym) == 'x' then y else y + ym
+    x' = if getTile (wrapx $ x+xm) y game == 'x' then x else wrapx $ x + xm
+    y' = if getTile x (y+ym) game == 'x' then y else y + ym
 
 wrapx pos
  | pos < 0 = maxTileHoriz
