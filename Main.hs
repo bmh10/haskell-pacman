@@ -13,6 +13,7 @@ offset = 100
 tileSize = 15
 maxTileHoriz = 27
 pacmanInitialPos = (1,1)
+ghostInitialPos = (1,5)
 pacmanInitialDir = East
 window = InWindow "Pacman" (width, height) (offset, offset)
 background = black
@@ -27,6 +28,7 @@ data PacmanGame = Game
     level :: [String],      -- Level layout
     pacmanPos :: (Int, Int), -- Tile coord of pacman
     pacmanDir :: Direction,  -- Pacman's direction of travel
+    ghostPos :: (Int, Int),
     score :: Int
   } deriving Show 
 
@@ -45,12 +47,12 @@ tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/
 
 -- Rendering
 render :: PacmanGame -> Picture 
-render g = pictures [renderLevel g, renderPacman g, renderScore g]
+render g = pictures [renderLevel g, renderPlayer (pacmanPos g) orange, renderPlayer (ghostPos g) blue, renderScore g]
 
-renderPacman :: PacmanGame -> Picture 
-renderPacman game = translate x y $ color orange $ circleSolid (tileSize/2-1)
+renderPlayer :: (Int, Int) -> Color -> Picture 
+renderPlayer (x, y) col = translate x' y' $ color col $ circleSolid (tileSize/2-1)
   where 
-    (x, y) = tileToCoord $ pacmanPos game
+    (x', y') = tileToCoord (x, y)
 
 renderScore :: PacmanGame -> Picture
 renderScore g = color white $ scale 0.1 0.1 $ text $ show $ score g 
@@ -122,7 +124,7 @@ initTiles = do
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, score = 0 }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = ghostInitialPos, score = 0 }
   print rows
   hClose handle
   return initialState
