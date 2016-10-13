@@ -4,6 +4,7 @@ import Graphics.Gloss
 import Graphics.Gloss.Data.ViewPort
 import Graphics.Gloss.Interface.Pure.Game
 import System.IO  
+import System.Random
 import Control.Monad
 
 fps = 5
@@ -22,7 +23,11 @@ background = black
 type Radius = Float 
 type Position = (Float, Float)
 
-data Direction = North | East | South | West deriving (Enum, Eq, Show)
+data Direction = North | East | South | West deriving (Enum, Eq, Show, Bounded)
+
+nextDir :: Direction -> Direction
+nextDir West = North
+nextDir d = succ d 
 
 data PacmanGame = Game
   { 
@@ -103,7 +108,14 @@ updateScore g
     setBlankTile = setTile x y '_'
 
 updatePacman g = g {pacmanPos = updatePlayerPos g (pacmanDir g) (pacmanPos g)}
-updateGhost g  = g {ghostPos  = updatePlayerPos g (ghostDir g)  (ghostPos g) }
+
+-- If ghost does not move after update (e.g. hit a wall), change direction then update again
+updateGhost g
+  | x == x' && y == y' = updateGhost $ g {ghostDir = nextDir (ghostDir g)}
+  | otherwise          = g {ghostPos = (x', y')}
+  where
+    (x, y)   = (ghostPos g)
+    (x', y') = updatePlayerPos g (ghostDir g) (ghostPos g)
 
 updatePlayerPos :: PacmanGame -> Direction -> (Int, Int) -> (Int, Int)
 updatePlayerPos g dir (x, y)
