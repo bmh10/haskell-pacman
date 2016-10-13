@@ -15,6 +15,7 @@ maxTileHoriz = 27
 pacmanInitialPos = (1,1)
 ghostInitialPos = (1,5)
 pacmanInitialDir = East
+ghostInitialDir = East
 window = InWindow "Pacman" (width, height) (offset, offset)
 background = black
 
@@ -29,6 +30,7 @@ data PacmanGame = Game
     pacmanPos :: (Int, Int), -- Tile coord of pacman
     pacmanDir :: Direction,  -- Pacman's direction of travel
     ghostPos :: (Int, Int),
+    ghostDir :: Direction,
     score :: Int
   } deriving Show 
 
@@ -87,7 +89,7 @@ handleKeys (EventKey (Char 's') Down _ _) game = game { pacmanDir = South }
 handleKeys _ game = game
 
 update :: Float -> PacmanGame -> PacmanGame
-update seconds game = updateScore $ updatePacman game
+update seconds game = updateScore $ updateGhost $ updatePacman game
 
 updateScore :: PacmanGame -> PacmanGame
 updateScore g
@@ -100,17 +102,19 @@ updateScore g
     tile = getTile x y g
     setBlankTile = setTile x y '_'
 
-updatePacman :: PacmanGame -> PacmanGame
-updatePacman g
- | dir == East  = move g 1 0
- | dir == West  = move g (-1) 0
- | dir == North = move g 0 (-1)
- | dir == South = move g 0 1
-   where dir = pacmanDir g
+updatePacman g = g {pacmanPos = updatePlayerPos g (pacmanDir g) (pacmanPos g)}
+updateGhost g  = g {ghostPos  = updatePlayerPos g (ghostDir g)  (ghostPos g) }
 
-move game xm ym = game {pacmanPos = (x', y')}
+updatePlayerPos :: PacmanGame -> Direction -> (Int, Int) -> (Int, Int)
+updatePlayerPos g dir (x, y)
+ | dir == East  = move g (x,y) (1,0)
+ | dir == West  = move g (x,y) (-1,0)
+ | dir == North = move g (x,y) (0,-1)
+ | dir == South = move g (x,y) (0,1)
+
+move :: PacmanGame -> (Int, Int) -> (Int, Int) -> (Int, Int)
+move game (x, y) (xm, ym) = (x', y')
   where
-    (x, y) = pacmanPos game
     x' = if getTile (wrapx $ x+xm) y game == 'x' then x else wrapx $ x + xm
     y' = if getTile x (y+ym) game == 'x' then y else y + ym
 
@@ -124,7 +128,7 @@ initTiles = do
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = ghostInitialPos, score = 0 }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = ghostInitialPos, ghostDir = ghostInitialDir, score = 0 }
   print rows
   hClose handle
   return initialState
