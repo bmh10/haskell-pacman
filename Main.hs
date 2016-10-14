@@ -103,10 +103,18 @@ handleKeys (EventKey (Char 's') Down _ _) game = game { pacmanDir = South }
 handleKeys _ game = game
 
 update :: Float -> PacmanGame -> PacmanGame
-update seconds game = updateScore $ updateGhost $ updatePacman $ updateSeconds game
+update seconds game = updateLives $ updateScore $ updateGhost $ updatePacman $ updateSeconds game
 
 updateSeconds :: PacmanGame -> PacmanGame
-updateSeconds game = game {seconds = (seconds game)+1}
+updateSeconds game = game {seconds = (seconds game) + 1}
+
+updateLives :: PacmanGame -> PacmanGame
+updateLives g
+ | px == gx && py == gy = g {lives = (lives g) - 1}
+ | otherwise            = g
+  where
+    (px, py) = pacmanPos g
+    (gx, gy) = ghostPos g
 
 updateScore :: PacmanGame -> PacmanGame
 updateScore g
