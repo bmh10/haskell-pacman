@@ -16,6 +16,7 @@ tileSize = 15
 maxTileHoriz = 27
 pacmanInitialPos = (1,1)
 ghostInitialPos = (1,5)
+pacmanInitialLives = 3
 pacmanInitialDir = East
 ghostInitialDir = East
 window = InWindow "Pacman" (width, height) (offset, offset)
@@ -38,6 +39,7 @@ data PacmanGame = Game
     ghostPos :: (Int, Int),
     ghostDir :: Direction,
     score :: Int,
+    lives :: Int,
     seconds :: Float
   } deriving Show 
 
@@ -56,7 +58,7 @@ tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/
 
 -- Rendering
 render :: PacmanGame -> Picture 
-render g = pictures [renderLevel g, renderPlayer (pacmanPos g) pacmanCol, renderPlayer (ghostPos g) blue, renderScore g]
+render g = pictures [renderLevel g, renderPlayer (pacmanPos g) pacmanCol, renderPlayer (ghostPos g) blue, renderDashboard g]
   where
     pacmanCol = if (mod (round (seconds g)) 2) == 1 then orange else red
 
@@ -65,8 +67,11 @@ renderPlayer (x, y) col = translate x' y' $ color col $ circleSolid (tileSize/2-
   where 
     (x', y') = tileToCoord (x, y)
 
-renderScore :: PacmanGame -> Picture
-renderScore g = color white $ scale 0.1 0.1 $ text $ show $ score g 
+renderDashboard :: PacmanGame -> Picture
+renderDashboard g = pictures [scorePic, livesPic]
+  where
+    scorePic = color white $ scale 0.1 0.1 $ text $ show $ score g
+    livesPic = color white $ scale 0.1 0.1 $ translate (-250) 0 $ text $ show $ lives g
 
 renderLevel :: PacmanGame -> Picture
 renderLevel game = renderLines (level game) 0
@@ -147,7 +152,7 @@ initTiles = do
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = ghostInitialPos, ghostDir = ghostInitialDir, score = 0, seconds = 0 }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = ghostInitialPos, ghostDir = ghostInitialDir, score = 0, seconds = 0, lives = pacmanInitialLives }
   print rows
   hClose handle
   return initialState
