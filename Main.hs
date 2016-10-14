@@ -6,6 +6,7 @@ import Graphics.Gloss.Interface.Pure.Game
 import System.IO  
 import System.Random
 import Control.Monad
+import Data.Fixed
 
 fps = 5
 width = 420 -- 28 * 15
@@ -36,7 +37,8 @@ data PacmanGame = Game
     pacmanDir :: Direction,  -- Pacman's direction of travel
     ghostPos :: (Int, Int),
     ghostDir :: Direction,
-    score :: Int
+    score :: Int,
+    seconds :: Float
   } deriving Show 
 
 -- Tile functions
@@ -54,7 +56,9 @@ tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/
 
 -- Rendering
 render :: PacmanGame -> Picture 
-render g = pictures [renderLevel g, renderPlayer (pacmanPos g) orange, renderPlayer (ghostPos g) blue, renderScore g]
+render g = pictures [renderLevel g, renderPlayer (pacmanPos g) pacmanCol, renderPlayer (ghostPos g) blue, renderScore g]
+  where
+    pacmanCol = if (mod (round (seconds g)) 2) == 1 then orange else red
 
 renderPlayer :: (Int, Int) -> Color -> Picture 
 renderPlayer (x, y) col = translate x' y' $ color col $ circleSolid (tileSize/2-1)
@@ -94,7 +98,10 @@ handleKeys (EventKey (Char 's') Down _ _) game = game { pacmanDir = South }
 handleKeys _ game = game
 
 update :: Float -> PacmanGame -> PacmanGame
-update seconds game = updateScore $ updateGhost $ updatePacman game
+update seconds game = updateScore $ updateGhost $ updatePacman $ updateSeconds game
+
+updateSeconds :: PacmanGame -> PacmanGame
+updateSeconds game = game {seconds = (seconds game)+1}
 
 updateScore :: PacmanGame -> PacmanGame
 updateScore g
@@ -140,7 +147,7 @@ initTiles = do
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = ghostInitialPos, ghostDir = ghostInitialDir, score = 0 }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = ghostInitialPos, ghostDir = ghostInitialDir, score = 0, seconds = 0 }
   print rows
   hClose handle
   return initialState
