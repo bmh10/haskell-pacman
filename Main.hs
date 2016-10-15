@@ -126,8 +126,9 @@ setPacmanDir dir g
  | (pacmanDir g) == oppositeDir dir = g { pacmanDir = dir, pacmanNextDir = None } 
  | otherwise                        = g { pacmanNextDir = dir }
 
+-- Have to update lives twice to prevent missed collision
 update :: Float -> PacmanGame -> PacmanGame
-update seconds game = updateScore $ updateGhosts 1 $ updatePacman $ updateLives $ updateSeconds game
+update seconds game = updateScore $ updateLives $ updateGhosts 1 $ updateLives $ updatePacman $ updateSeconds game
 
 updateSeconds :: PacmanGame -> PacmanGame
 updateSeconds game = game {seconds = (seconds game) + 1}
