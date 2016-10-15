@@ -1,6 +1,7 @@
 module Main where
 
 import Graphics.Gloss
+import qualified Graphics.Gloss.Game as GG
 import Graphics.Gloss.Data.ViewPort
 import Graphics.Gloss.Interface.Pure.Game
 import System.IO  
@@ -58,14 +59,24 @@ tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/
 
 -- Rendering
 render :: PacmanGame -> Picture 
-render g = pictures [renderLevel g, renderPlayer (pacmanPos g) pacmanCol, renderPlayer (ghostPos g) blue, renderDashboard g]
+render g = pictures [renderLevel g, renderPlayerF (pacmanPos g) (pacmanDir g) pacmanImg, renderPlayer (ghostPos g) blue, renderDashboard g]
   where
-    pacmanCol = if (mod (round (seconds g)) 2) == 1 then orange else red
+    pacmanImg = if (mod (round (seconds g)) 2) == 1 then "img/pacmanOpen.png" else "img/pacmanClosed.png"
 
 renderPlayer :: (Int, Int) -> Color -> Picture 
 renderPlayer (x, y) col = translate x' y' $ color col $ circleSolid (tileSize/2-1)
   where 
     (x', y') = tileToCoord (x, y)
+
+renderPlayerF :: (Int, Int) -> Direction -> FilePath -> Picture 
+renderPlayerF (x, y) dir file = translate x' y' $ rotate (dirToAngle dir) $ GG.png file
+  where 
+    (x', y') = tileToCoord (x, y)
+    dirToAngle :: Direction -> Float
+    dirToAngle West = 0
+    dirToAngle North = 90
+    dirToAngle East = 180
+    dirToAngle South = 270
 
 renderDashboard :: PacmanGame -> Picture
 renderDashboard g = pictures [scorePic, livesPic]
