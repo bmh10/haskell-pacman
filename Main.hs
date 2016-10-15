@@ -11,7 +11,8 @@ import Data.Fixed
 
 fps = 5
 width = 420 -- 28 * 15
-height = 465 -- 31 * 15
+height = 465 + dashboardHeight -- 31 * 15
+dashboardHeight = 20
 offset = 100
 tileSize = 15
 maxTileHoriz = 27
@@ -27,6 +28,13 @@ type Radius = Float
 type Position = (Float, Float)
 
 data Direction = North | East | South | West | None deriving (Enum, Eq, Show, Bounded)
+
+oppositeDir :: Direction -> Direction
+oppositeDir North = South
+oppositeDir South = North
+oppositeDir East  = West
+oppositeDir West  = East
+oppositeDir None  = None
 
 nextDir :: Direction -> Direction
 nextDir West = North
@@ -83,8 +91,8 @@ renderPlayerF (x, y) dir file = translate x' y' $ rotate (dirToAngle dir) $ GG.p
 renderDashboard :: PacmanGame -> Picture
 renderDashboard g = pictures [scorePic, livesPic]
   where
-    scorePic = color white $ scale 0.1 0.1 $ text $ show $ score g
-    livesPic = color white $ scale 0.1 0.1 $ translate (-250) 0 $ text $ show $ lives g
+    scorePic = color white $ translate (-50) (-fromIntegral height/2 + 5) $ scale 0.1 0.1 $ text $ show $ score g
+    livesPic = color white $ translate 50 (-fromIntegral height/2 + 5) $ scale 0.1 0.1 $ text $ show $ lives g
 
 renderLevel :: PacmanGame -> Picture
 renderLevel game = renderLines (level game) 0
@@ -109,14 +117,18 @@ renderTile c x y
 
 -- Event handling
 handleKeys :: Event -> PacmanGame -> PacmanGame
-handleKeys (EventKey (Char 'd') Down _ _) g = if (pacmanDir g) == West then g { pacmanDir = East, pacmanNextDir = None } else g { pacmanNextDir = East }
-handleKeys (EventKey (Char 'a') Down _ _) g = if (pacmanDir g) == East then g { pacmanDir = West, pacmanNextDir = None } else g { pacmanNextDir = West }
-handleKeys (EventKey (Char 'w') Down _ _) g = if (pacmanDir g) == South then g { pacmanDir = North, pacmanNextDir = None } else g { pacmanNextDir = North }
-handleKeys (EventKey (Char 's') Down _ _) g = if (pacmanDir g) == North then g { pacmanDir = South, pacmanNextDir = None } else g { pacmanNextDir = South }
+handleKeys (EventKey (Char 'd') Down _ _) g = setPacmanDir East g
+handleKeys (EventKey (Char 'a') Down _ _) g = setPacmanDir West g
+handleKeys (EventKey (Char 'w') Down _ _) g = setPacmanDir North g
+handleKeys (EventKey (Char 's') Down _ _) g = setPacmanDir South g
 handleKeys _ game = game
 
+setPacmanDir dir g
+ | (pacmanDir g) == oppositeDir dir = g { pacmanDir = dir, pacmanNextDir = None } 
+ | otherwise                        = g { pacmanNextDir = dir }
+
 update :: Float -> PacmanGame -> PacmanGame
-update seconds game = updateLives $ updateScore $ updateGhost $ updatePacman $ updateSeconds game
+update seconds game =  updateScore $ updateGhost $ updatePacman $ updateLives $ updateSeconds game
 
 updateSeconds :: PacmanGame -> PacmanGame
 updateSeconds game = game {seconds = (seconds game) + 1}
@@ -131,8 +143,8 @@ updateLives g
 
 updateScore :: PacmanGame -> PacmanGame
 updateScore g
-  | tile == '.' = setBlankTile $ g { score = s+1 }
-  | tile == 'o' = setBlankTile $ g { score = s+10 }
+  | tile == '.' = setBlankTile $ g { score = s+10 }
+  | tile == 'o' = setBlankTile $ g { score = s+50 }
   | otherwise = g
   where
     (x, y) = pacmanPos g
