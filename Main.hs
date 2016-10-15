@@ -68,25 +68,21 @@ tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/
 
 -- Rendering
 render :: PacmanGame -> Picture 
-render g = pictures [renderLevel g, renderPlayerF (pacmanPos g) (pacmanDir g) pacmanImg, renderPlayer (ghostPos g) blue, renderDashboard g]
-  where
-    pacmanImg = if (mod (round (seconds g)) 2) == 1 then "img/pacmanOpen.png" else "img/pacmanClosed.png"
+render g = pictures [renderLevel g, 
+                     renderPlayer "pacman" (pacmanPos g) (pacmanDir g) (seconds g),
+                     renderPlayer "redGhost" (ghostPos g) (ghostDir g) (seconds g), 
+                     renderDashboard g]
 
-renderPlayer :: (Int, Int) -> Color -> Picture 
-renderPlayer (x, y) col = translate x' y' $ color col $ circleSolid (tileSize/2-1)
+renderPlayer :: String -> (Int, Int) -> Direction -> Float -> Picture 
+renderPlayer player (x, y) dir seconds = translate x' y' $ GG.png file
   where 
     (x', y') = tileToCoord (x, y)
+    file = getFile player dir seconds
 
-renderPlayerF :: (Int, Int) -> Direction -> FilePath -> Picture 
-renderPlayerF (x, y) dir file = translate x' y' $ rotate (dirToAngle dir) $ GG.png file
+getFile :: String -> Direction -> Float -> String
+getFile player dir seconds = "img/" ++ player ++ show dir ++ step ++ ".png"
   where 
-    (x', y') = tileToCoord (x, y)
-    dirToAngle :: Direction -> Float
-    dirToAngle West = 0
-    dirToAngle North = 90
-    dirToAngle East = 180
-    dirToAngle South = 270
-    dirToAngle None = 0
+    step = if (mod (round seconds) 2) == 1 then "1" else "2"
 
 renderDashboard :: PacmanGame -> Picture
 renderDashboard g = pictures [scorePic, livesPic]
