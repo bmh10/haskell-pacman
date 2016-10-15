@@ -26,7 +26,7 @@ background = black
 type Radius = Float 
 type Position = (Float, Float)
 
-data Direction = North | East | South | West deriving (Enum, Eq, Show, Bounded)
+data Direction = North | East | South | West | None deriving (Enum, Eq, Show, Bounded)
 
 nextDir :: Direction -> Direction
 nextDir West = North
@@ -37,6 +37,7 @@ data PacmanGame = Game
     level :: [String],      -- Level layout
     pacmanPos :: (Int, Int), -- Tile coord of pacman
     pacmanDir :: Direction,  -- Pacman's direction of travel
+    pacmanNextDir :: Direction, -- Buffered next direction
     ghostPos :: (Int, Int),
     ghostDir :: Direction,
     score :: Int,
@@ -77,6 +78,7 @@ renderPlayerF (x, y) dir file = translate x' y' $ rotate (dirToAngle dir) $ GG.p
     dirToAngle North = 90
     dirToAngle East = 180
     dirToAngle South = 270
+    dirToAngle None = 0
 
 renderDashboard :: PacmanGame -> Picture
 renderDashboard g = pictures [scorePic, livesPic]
@@ -107,10 +109,10 @@ renderTile c x y
 
 -- Event handling
 handleKeys :: Event -> PacmanGame -> PacmanGame
-handleKeys (EventKey (Char 'd') Down _ _) game = game { pacmanDir = East }
-handleKeys (EventKey (Char 'a') Down _ _) game = game { pacmanDir = West }
-handleKeys (EventKey (Char 'w') Down _ _) game = game { pacmanDir = North }
-handleKeys (EventKey (Char 's') Down _ _) game = game { pacmanDir = South }
+handleKeys (EventKey (Char 'd') Down _ _) g = if (pacmanDir g) == West then g { pacmanDir = East, pacmanNextDir = None } else g { pacmanNextDir = East }
+handleKeys (EventKey (Char 'a') Down _ _) g = if (pacmanDir g) == East then g { pacmanDir = West, pacmanNextDir = None } else g { pacmanNextDir = West }
+handleKeys (EventKey (Char 'w') Down _ _) g = if (pacmanDir g) == South then g { pacmanDir = North, pacmanNextDir = None } else g { pacmanNextDir = North }
+handleKeys (EventKey (Char 's') Down _ _) g = if (pacmanDir g) == North then g { pacmanDir = South, pacmanNextDir = None } else g { pacmanNextDir = South }
 handleKeys _ game = game
 
 update :: Float -> PacmanGame -> PacmanGame
@@ -138,7 +140,7 @@ updateScore g
     tile = getTile x y g
     setBlankTile = setTile x y '_'
 
-updatePacman g = g {pacmanPos = updatePlayerPos g (pacmanDir g) (pacmanPos g)}
+updatePacman g = updatePacmanPos g
 
 -- If ghost does not move after update (e.g. hit a wall), change direction then update again
 updateGhost g
@@ -146,32 +148,49 @@ updateGhost g
   | otherwise          = g {ghostPos = (x', y')}
   where
     (x, y)   = (ghostPos g)
-    (x', y') = updatePlayerPos g (ghostDir g) (ghostPos g)
+    (x', y') = updateGhostPos g (ghostDir g) (ghostPos g)
 
-updatePlayerPos :: PacmanGame -> Direction -> (Int, Int) -> (Int, Int)
-updatePlayerPos g dir (x, y)
- | dir == East  = move g (x,y) (1,0)
- | dir == West  = move g (x,y) (-1,0)
- | dir == North = move g (x,y) (0,-1)
- | dir == South = move g (x,y) (0,1)
-
-move :: PacmanGame -> (Int, Int) -> (Int, Int) -> (Int, Int)
-move game (x, y) (xm, ym) = (x', y')
+updatePacmanPos :: PacmanGame -> PacmanGame
+updatePacmanPos g
+ | canMove (x, y) nextDir g = g { pacmanPos = (move (x, y) nextDir), pacmanDir = nextDir, pacmanNextDir = None }
+ | canMove (x, y) dir g     = g { pacmanPos = (move (x, y) dir) }
+ | otherwise                = g
   where
-    x' = if getTile (wrapx $ x+xm) y game == 'x' then x else wrapx $ x + xm
-    y' = if getTile x (y+ym) game == 'x' then y else y + ym
+    dir = pacmanDir g
+    nextDir = pacmanNextDir g
+    (x, y) = pacmanPos g
 
-wrapx pos
- | pos < 0 = maxTileHoriz
- | pos > maxTileHoriz = 0
- | otherwise = pos
+updateGhostPos :: PacmanGame -> Direction -> (Int, Int) -> (Int, Int)
+updateGhostPos g dir (x, y) = if canMove (x, y) dir g then move (x, y) dir else (x, y)
+
+move :: (Int, Int) -> Direction -> (Int, Int)
+move (x, y) East = (wrapx $ x+1, y)
+move (x, y) West = (wrapx $ x-1, y)
+move (x, y) North = (x, y-1)
+move (x, y) South = (x, y+1)
+move (x, y) None = (x, y)
+
+canMove :: (Int, Int) -> Direction -> PacmanGame -> Bool
+canMove (x, y) East g = canMoveTo (wrapx $ x+1, y) g
+canMove (x, y) West g = canMoveTo (wrapx $ x-1, y) g
+canMove (x, y) North g = canMoveTo (x, y-1) g
+canMove (x, y) South g = canMoveTo (x, y+1) g
+canMove (x, y) None g = False
+
+canMoveTo :: (Int, Int) -> PacmanGame -> Bool
+canMoveTo (x, y) g = getTile x y g /= 'x'
+
+wrapx x
+ | x < 0 = maxTileHoriz
+ | x > maxTileHoriz = 0
+ | otherwise = x
 
 -- Not sure why print is required...
 initTiles = do 
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = ghostInitialPos, ghostDir = ghostInitialDir, score = 0, seconds = 0, lives = pacmanInitialLives }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = ghostInitialPos, ghostDir = ghostInitialDir, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None }
   print rows
   hClose handle
   return initialState
