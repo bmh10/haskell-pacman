@@ -164,21 +164,18 @@ updateGhostPos :: PacmanGame -> Direction -> (Int, Int) -> (Int, Int)
 updateGhostPos g dir (x, y) = if canMove (x, y) dir g then move (x, y) dir else (x, y)
 
 move :: (Int, Int) -> Direction -> (Int, Int)
+move (x, y) None = (x, y)
 move (x, y) East = (wrapx $ x+1, y)
 move (x, y) West = (wrapx $ x-1, y)
 move (x, y) North = (x, y-1)
 move (x, y) South = (x, y+1)
-move (x, y) None = (x, y)
 
 canMove :: (Int, Int) -> Direction -> PacmanGame -> Bool
-canMove (x, y) East g = canMoveTo (wrapx $ x+1, y) g
-canMove (x, y) West g = canMoveTo (wrapx $ x-1, y) g
-canMove (x, y) North g = canMoveTo (x, y-1) g
-canMove (x, y) South g = canMoveTo (x, y+1) g
 canMove (x, y) None g = False
+canMove (x, y) dir g = canMoveTo g $ move (x, y) dir
 
-canMoveTo :: (Int, Int) -> PacmanGame -> Bool
-canMoveTo (x, y) g = getTile x y g /= 'x'
+canMoveTo :: PacmanGame -> (Int, Int) -> Bool
+canMoveTo g (x, y) = getTile x y g /= 'x'
 
 wrapx x
  | x < 0 = maxTileHoriz
