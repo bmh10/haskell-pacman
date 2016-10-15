@@ -17,7 +17,8 @@ offset = 100
 tileSize = 15
 maxTileHoriz = 27
 pacmanInitialPos = (1,1)
-ghostInitialPos = (1,5)
+redGhostInitialPos = (1,5)
+blueGhostInitialPos = (1,7)
 pacmanInitialLives = 3
 pacmanInitialDir = East
 ghostInitialDir = East
@@ -46,8 +47,8 @@ data PacmanGame = Game
     pacmanPos :: (Int, Int), -- Tile coord of pacman
     pacmanDir :: Direction,  -- Pacman's direction of travel
     pacmanNextDir :: Direction, -- Buffered next direction
-    ghostPos :: (Int, Int),
-    ghostDir :: Direction,
+    ghostPos :: [(Int, Int)],
+    ghostDir :: [Direction],
     score :: Int,
     lives :: Int,
     seconds :: Float
@@ -70,7 +71,8 @@ tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/
 render :: PacmanGame -> Picture 
 render g = pictures [renderLevel g, 
                      renderPlayer "pacman" (pacmanPos g) (pacmanDir g) (seconds g),
-                     renderPlayer "redGhost" (ghostPos g) (ghostDir g) (seconds g), 
+                     renderPlayer "redGhost" ((ghostPos g) !! 0) ((ghostDir g) !! 0) (seconds g),
+                     renderPlayer "blueGhost" ((ghostPos g) !! 1) ((ghostDir g) !! 1) (seconds g), 
                      renderDashboard g]
 
 renderPlayer :: String -> (Int, Int) -> Direction -> Float -> Picture 
@@ -79,6 +81,7 @@ renderPlayer player (x, y) dir seconds = translate x' y' $ GG.png file
     (x', y') = tileToCoord (x, y)
     file = getFile player dir seconds
 
+-- TODO: should preload images
 getFile :: String -> Direction -> Float -> String
 getFile player dir seconds = "img/" ++ player ++ show dir ++ step ++ ".png"
   where 
@@ -124,18 +127,15 @@ setPacmanDir dir g
  | otherwise                        = g { pacmanNextDir = dir }
 
 update :: Float -> PacmanGame -> PacmanGame
-update seconds game =  updateScore $ updateGhost $ updatePacman $ updateLives $ updateSeconds game
+update seconds game = updateScore $ updateGhosts 1 $ updatePacman $ updateLives $ updateSeconds game
 
 updateSeconds :: PacmanGame -> PacmanGame
 updateSeconds game = game {seconds = (seconds game) + 1}
 
 updateLives :: PacmanGame -> PacmanGame
 updateLives g
- | px == gx && py == gy = g {lives = (lives g) - 1}
- | otherwise            = g
-  where
-    (px, py) = pacmanPos g
-    (gx, gy) = ghostPos g
+ | elem (pacmanPos g) (ghostPos g) = g {lives = (lives g) - 1}
+ | otherwise                       = g
 
 updateScore :: PacmanGame -> PacmanGame
 updateScore g
@@ -151,12 +151,18 @@ updateScore g
 updatePacman g = updatePacmanPos g
 
 -- If ghost does not move after update (e.g. hit a wall), change direction then update again
-updateGhost g
-  | x == x' && y == y' = updateGhost $ g {ghostDir = nextDir (ghostDir g)}
-  | otherwise          = g {ghostPos = (x', y')}
+updateGhosts :: Int -> PacmanGame -> PacmanGame
+updateGhosts 0 g = updateGhost 0 g
+updateGhosts n g = updateGhost n $ updateGhosts (n-1) g  
+
+updateGhost :: Int -> PacmanGame -> PacmanGame
+updateGhost idx g
+  | x == x' && y == y' = updateGhost idx $ g {ghostDir = ((take idx (ghostDir g)) ++ [nextDir dir] ++ (drop (idx+1) (ghostDir g)))}
+  | otherwise          = g {ghostPos = (take idx (ghostPos g) ++ [(x', y')] ++ drop (idx+1) (ghostPos g))}
   where
-    (x, y)   = (ghostPos g)
-    (x', y') = updateGhostPos g (ghostDir g) (ghostPos g)
+    (x, y)   = (ghostPos g) !! idx
+    dir      = (ghostDir g) !! idx
+    (x', y') = updateGhostPos g dir (x, y)
 
 updatePacmanPos :: PacmanGame -> PacmanGame
 updatePacmanPos g
@@ -195,7 +201,7 @@ initTiles = do
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = ghostInitialPos, ghostDir = ghostInitialDir, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir], score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None }
   print rows
   hClose handle
   return initialState
