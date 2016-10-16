@@ -163,7 +163,7 @@ updateScore g
     tile = getTile x y g
     setBlankTile = setTile x y '_'
 
-setGhostsScared g = g {ghostState = [Scared, Scared, Scared, Scared]}
+setGhostsScared g = g {ghostState = replicate 4 Scared}
 setGhostReturning g idx = g {ghostState = take idx (ghostState g) ++ [Returning] ++ drop (idx+1) (ghostState g)}
 
 updatePacman g = updatePacmanPos g
@@ -219,7 +219,7 @@ initTiles = do
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], ghostState = [Normal, Normal, Normal, Normal], score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], ghostState = replicate 4 Normal, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None }
   print rows
   hClose handle
   return initialState
