@@ -18,7 +18,9 @@ tileSize = 15
 maxTileHoriz = 27
 pacmanInitialPos = (1,1)
 redGhostInitialPos = (1,5)
-blueGhostInitialPos = (1,7)
+blueGhostInitialPos = (1,6)
+yellowGhostInitialPos = (1,7)
+pinkGhostInitialPos = (1,8)
 pacmanInitialLives = 3
 pacmanInitialDir = East
 ghostInitialDir = East
@@ -72,7 +74,9 @@ render :: PacmanGame -> Picture
 render g = pictures [renderLevel g, 
                      renderPlayer "pacman" (pacmanPos g) (pacmanDir g) (seconds g),
                      renderPlayer "redGhost" ((ghostPos g) !! 0) ((ghostDir g) !! 0) (seconds g),
-                     renderPlayer "blueGhost" ((ghostPos g) !! 1) ((ghostDir g) !! 1) (seconds g), 
+                     renderPlayer "blueGhost" ((ghostPos g) !! 1) ((ghostDir g) !! 1) (seconds g),
+                     renderPlayer "yellowGhost" ((ghostPos g) !! 2) ((ghostDir g) !! 2) (seconds g),
+                     renderPlayer "pinkGhost" ((ghostPos g) !! 3) ((ghostDir g) !! 3) (seconds g),
                      renderDashboard g]
 
 renderPlayer :: String -> (Int, Int) -> Direction -> Float -> Picture 
@@ -128,7 +132,7 @@ setPacmanDir dir g
 
 -- Have to update lives twice to prevent missed collision
 update :: Float -> PacmanGame -> PacmanGame
-update seconds game = updateScore $ updateLives $ updateGhosts 1 $ updateLives $ updatePacman $ updateSeconds game
+update seconds game = updateScore $ updateLives $ updateGhosts 3 $ updateLives $ updatePacman $ updateSeconds game
 
 updateSeconds :: PacmanGame -> PacmanGame
 updateSeconds game = game {seconds = (seconds game) + 1}
@@ -202,7 +206,7 @@ initTiles = do
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir], score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None }
   print rows
   hClose handle
   return initialState
