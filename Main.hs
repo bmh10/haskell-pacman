@@ -8,6 +8,8 @@ import System.IO
 import System.Random
 import Control.Monad
 import Data.Fixed
+import Data.List
+import Data.Maybe
 
 fps = 5
 width = 420 -- 28 * 15
@@ -90,7 +92,8 @@ renderPlayer player (x, y) dir state seconds = translate x' y' $ GG.png file
 -- TODO: should preload images
 getFile :: String -> Direction -> PlayerState -> Float -> String
 getFile player dir state seconds
- | state == Scared = "img/scaredGhost" ++ step ++ ".png" 
+ | state == Scared = "img/scaredGhost" ++ step ++ ".png"
+ | state == Returning = "img/eyes.png"
  | otherwise = "img/" ++ player ++ show dir ++ step ++ ".png"
   where 
     step = if (mod (round seconds) 2) == 1 then "1" else "2"
@@ -143,8 +146,11 @@ updateSeconds game = game {seconds = (seconds game) + 1}
 
 updateLives :: PacmanGame -> PacmanGame
 updateLives g
- | elem (pacmanPos g) (ghostPos g) = g {lives = (lives g) - 1}
- | otherwise                       = g
+ | ghostIdx == Nothing = g
+ | (ghostState g) !! (fromJust ghostIdx) /= Normal = setGhostReturning g (fromJust ghostIdx) 
+ | otherwise = g {lives = (lives g) - 1}
+  where
+    ghostIdx = elemIndex (pacmanPos g) (ghostPos g)
 
 updateScore :: PacmanGame -> PacmanGame
 updateScore g
@@ -157,7 +163,8 @@ updateScore g
     tile = getTile x y g
     setBlankTile = setTile x y '_'
 
-setGhostsScared g = g {ghostState = [Scared, Scared, Scared, Scared ]}
+setGhostsScared g = g {ghostState = [Scared, Scared, Scared, Scared]}
+setGhostReturning g idx = g {ghostState = take idx (ghostState g) ++ [Returning] ++ drop (idx+1) (ghostState g)}
 
 updatePacman g = updatePacmanPos g
 
