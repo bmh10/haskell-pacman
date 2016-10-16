@@ -31,6 +31,7 @@ type Radius = Float
 type Position = (Float, Float)
 
 data Direction = North | East | South | West | None deriving (Enum, Eq, Show, Bounded)
+data PlayerState = Normal | Scared | Returning deriving (Eq, Show)
 
 oppositeDir :: Direction -> Direction
 oppositeDir North = South
@@ -51,6 +52,7 @@ data PacmanGame = Game
     pacmanNextDir :: Direction, -- Buffered next direction
     ghostPos :: [(Int, Int)],
     ghostDir :: [Direction],
+    ghostState :: [PlayerState],
     score :: Int,
     lives :: Int,
     seconds :: Float
@@ -72,22 +74,24 @@ tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/
 -- Rendering
 render :: PacmanGame -> Picture 
 render g = pictures [renderLevel g, 
-                     renderPlayer "pacman" (pacmanPos g) (pacmanDir g) (seconds g),
-                     renderPlayer "redGhost" ((ghostPos g) !! 0) ((ghostDir g) !! 0) (seconds g),
-                     renderPlayer "blueGhost" ((ghostPos g) !! 1) ((ghostDir g) !! 1) (seconds g),
-                     renderPlayer "yellowGhost" ((ghostPos g) !! 2) ((ghostDir g) !! 2) (seconds g),
-                     renderPlayer "pinkGhost" ((ghostPos g) !! 3) ((ghostDir g) !! 3) (seconds g),
+                     renderPlayer "pacman" (pacmanPos g) (pacmanDir g) Normal (seconds g),
+                     renderPlayer "redGhost" ((ghostPos g) !! 0) ((ghostDir g) !! 0) ((ghostState g) !! 0) (seconds g),
+                     renderPlayer "blueGhost" ((ghostPos g) !! 1) ((ghostDir g) !! 1) ((ghostState g) !! 1) (seconds g),
+                     renderPlayer "yellowGhost" ((ghostPos g) !! 2) ((ghostDir g) !! 2) ((ghostState g) !! 2) (seconds g),
+                     renderPlayer "pinkGhost" ((ghostPos g) !! 3) ((ghostDir g) !! 3) ((ghostState g) !! 3) (seconds g),
                      renderDashboard g]
 
-renderPlayer :: String -> (Int, Int) -> Direction -> Float -> Picture 
-renderPlayer player (x, y) dir seconds = translate x' y' $ GG.png file
+renderPlayer :: String -> (Int, Int) -> Direction -> PlayerState -> Float -> Picture 
+renderPlayer player (x, y) dir state seconds = translate x' y' $ GG.png file
   where 
     (x', y') = tileToCoord (x, y)
-    file = getFile player dir seconds
+    file = getFile player dir state seconds
 
 -- TODO: should preload images
-getFile :: String -> Direction -> Float -> String
-getFile player dir seconds = "img/" ++ player ++ show dir ++ step ++ ".png"
+getFile :: String -> Direction -> PlayerState -> Float -> String
+getFile player dir state seconds
+ | state == Scared = "img/scaredGhost" ++ step ++ ".png" 
+ | otherwise = "img/" ++ player ++ show dir ++ step ++ ".png"
   where 
     step = if (mod (round seconds) 2) == 1 then "1" else "2"
 
@@ -145,13 +149,15 @@ updateLives g
 updateScore :: PacmanGame -> PacmanGame
 updateScore g
   | tile == '.' = setBlankTile $ g { score = s+10 }
-  | tile == 'o' = setBlankTile $ g { score = s+50 }
+  | tile == 'o' = setGhostsScared $ setBlankTile $ g { score = s+50 }
   | otherwise = g
   where
     (x, y) = pacmanPos g
     s = score g
     tile = getTile x y g
     setBlankTile = setTile x y '_'
+
+setGhostsScared g = g {ghostState = [Scared, Scared, Scared, Scared ]}
 
 updatePacman g = updatePacmanPos g
 
@@ -206,7 +212,7 @@ initTiles = do
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], ghostState = [Normal, Normal, Normal, Normal], score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None }
   print rows
   hClose handle
   return initialState
