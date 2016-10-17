@@ -67,12 +67,14 @@ getTile x y g = (level g) !! y !! x
 setTile :: Int -> Int -> Char -> PacmanGame -> PacmanGame
 setTile x y c g = g {level = updatedLevel}
   where 
-    -- TODO: use sequence to avoid this
-    updatedLevel = take y (level g) ++ [take x ((level g) !! y) ++ [c] ++ drop (x+1) ((level g) !! y)] ++ drop (y+1) (level g)
+    updatedLevel = setAtIdx y (setAtIdx x c ((level g) !! y)) (level g)
 
 -- Map tile coords ((0,0) is top-left tile) to actual screen coords ((0, 0) is center of screen)
 tileToCoord :: (Int, Int) -> Position 
 tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/2, fromIntegral height/2 - fromIntegral y*tileSize - tileSize/2)
+
+setAtIdx :: Int -> a -> [a] -> [a]
+setAtIdx idx val xs = take idx xs ++ [val] ++ drop (idx+1) xs
 
 -- Rendering
 render :: PacmanGame -> Picture 
@@ -165,8 +167,7 @@ updateScore g
     setBlankTile = setTile x y '_'
 
 setGhostsScared g = g {ghostState = replicate 4 Scared}
---TODO: use sequence to update
-setGhostReturning g idx = g {ghostState = take idx (ghostState g) ++ [Returning] ++ drop (idx+1) (ghostState g)}
+setGhostReturning g idx = g {ghostState = setAtIdx idx Returning (ghostState g)}
 
 updatePacman g = updatePacmanPos g
 
@@ -176,10 +177,9 @@ updateGhosts 0 g = updateGhost 0 g
 updateGhosts n g = updateGhost n $ updateGhosts (n-1) g  
 
 updateGhost :: Int -> PacmanGame -> PacmanGame
---TODO: use sequence to update
 updateGhost idx g
-  | x == x' && y == y' = updateGhost idx $ g {ghostDir = ((take idx (ghostDir g)) ++ [nextDir dir] ++ (drop (idx+1) (ghostDir g)))}
-  | otherwise          = g {ghostPos = (take idx (ghostPos g) ++ [(x', y')] ++ drop (idx+1) (ghostPos g))}
+  | x == x' && y == y' = updateGhost idx $ g {ghostDir = setAtIdx idx (nextDir dir) (ghostDir g)}
+  | otherwise          = g {ghostPos = setAtIdx idx (x', y') (ghostPos g)}
   where
     (x, y)   = (ghostPos g) !! idx
     dir      = (ghostDir g) !! idx
