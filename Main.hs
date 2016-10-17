@@ -178,12 +178,25 @@ updateGhosts n g = updateGhost n $ updateGhosts (n-1) g
 
 updateGhost :: Int -> PacmanGame -> PacmanGame
 updateGhost idx g
-  | x == x' && y == y' = updateGhost idx $ g {ghostDir = setAtIdx idx (nextDir dir) (ghostDir g)}
-  | otherwise          = g {ghostPos = setAtIdx idx (x', y') (ghostPos g)}
+  | canMove (x, y) dir g = g {ghostPos = setAtIdx idx (x', y') (ghostPos g)}
+  | otherwise            = g {ghostDir = setAtIdx idx (calculateGhostNextDir idx g) (ghostDir g)}
   where
     (x, y)   = (ghostPos g) !! idx
     dir      = (ghostDir g) !! idx
-    (x', y') = updateGhostPos g dir (x, y)
+    (x', y') = move (x, y) dir
+
+calculateGhostNextDir :: Int -> PacmanGame -> Direction
+calculateGhostNextDir idx g
+ | (ghostState g) !! idx == Returning = calculateNextDir g ((ghostPos g) !! idx) (0, 0)
+ | otherwise = nextDir ((ghostDir g) !! idx)
+
+calculateNextDir :: PacmanGame -> (Int,Int) -> (Int,Int) -> Direction
+calculateNextDir g (x,y) (tx,ty)
+ | x < tx && canMove (x,y) East g = East
+ | x > tx && canMove (x,y) West g = West
+ | y < ty && canMove (x,y) South g = South
+ | y > ty && canMove (x,y) North g = North
+ | otherwise = None
 
 updatePacmanPos :: PacmanGame -> PacmanGame
 updatePacmanPos g
@@ -195,8 +208,8 @@ updatePacmanPos g
     nextDir = pacmanNextDir g
     (x, y) = pacmanPos g
 
-updateGhostPos :: PacmanGame -> Direction -> (Int, Int) -> (Int, Int)
-updateGhostPos g dir (x, y) = if canMove (x, y) dir g then move (x, y) dir else (x, y)
+--updateGhostPos :: PacmanGame -> Direction -> (Int, Int) -> (Int, Int)
+--updateGhostPos g dir (x, y) = if canMove (x, y) dir g then move (x, y) dir else (x, y)
 
 move :: (Int, Int) -> Direction -> (Int, Int)
 move (x, y) None = (x, y)
