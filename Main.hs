@@ -20,8 +20,8 @@ tileSize = 15
 maxTileHoriz = 27
 pacmanInitialPos = (13,23)
 redGhostInitialPos = (1,5)
-blueGhostInitialPos = (1,6)
-yellowGhostInitialPos = (1,7)
+blueGhostInitialPos = (15,15)
+yellowGhostInitialPos = (10,15)
 pinkGhostInitialPos = (1,8)
 pacmanInitialLives = 3
 pacmanInitialDir = East
@@ -44,6 +44,7 @@ oppositeDir None  = None
 
 nextDir :: Direction -> Direction
 nextDir West = North
+nextDir None = None
 nextDir d = succ d 
 
 data PacmanGame = Game
