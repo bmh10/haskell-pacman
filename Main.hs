@@ -21,6 +21,7 @@ maxTileHoriz = 27
 pacmanInitialPos = (13,23)
 redGhostInitialPos = (1,5)
 blueGhostInitialPos = (15,15)
+centerPos = (14,14)
 yellowGhostInitialPos = (10,15)
 pinkGhostInitialPos = (13,14)
 pacmanInitialLives = 3
@@ -178,17 +179,40 @@ updateGhosts 0 g = updateGhost 0 g
 updateGhosts n g = updateGhost n $ updateGhosts (n-1) g  
 
 updateGhost :: Int -> PacmanGame -> PacmanGame
-updateGhost idx g
-  | canMove (x, y) dir g = g {ghostPos = setAtIdx idx (x', y') (ghostPos g)}
-  | otherwise            = g {ghostDir = setAtIdx idx (calculateGhostNextDir idx g) (ghostDir g)}
+updateGhost idx g = updateGhostPos idx $ updateGhostDir idx g
+--  | atJunction (x, y) g  = g {ghostDir = setAtIdx idx (calculateGhostNextDir idx g) (ghostDir g)}
+--  | canMove (x, y) dir g = g {ghostPos = setAtIdx idx (x', y') (ghostPos g)}
+--  | otherwise            = g {ghostDir = setAtIdx idx (calculateGhostNextDir idx g) (ghostDir g)}
+--  where
+--    (x, y)   = (ghostPos g) !! idx
+--    dir      = (ghostDir g) !! idx
+--    (x', y') = move (x, y) dir
+
+updateGhostDir idx g
+ | atJunction (x, y) ((ghostDir g) !! idx) g  = g {ghostDir = setAtIdx idx (calculateGhostNextDir idx g) (ghostDir g)}
+ | otherwise = g
   where
     (x, y)   = (ghostPos g) !! idx
     dir      = (ghostDir g) !! idx
     (x', y') = move (x, y) dir
 
+updateGhostPos idx g
+  | canMove (x, y) dir g = g {ghostPos = setAtIdx idx (x', y') (ghostPos g)}
+  | otherwise = g
+  where
+    (x, y)   = (ghostPos g) !! idx
+    dir      = (ghostDir g) !! idx
+    (x', y') = move (x, y) dir
+  
+atJunction (x, y) dir g = 
+  ((dir == North || dir == South) && (canMove (x, y) East g || canMove (x, y) West g)) ||
+  ((dir == East || dir == West) && (canMove (x, y) North g || canMove (x, y) South g))
+
+--(length $ filter (==True) $ [canMove (x, y) North g, canMove (x, y) East g, canMove (x, y) South g, canMove (x, y) West g]) > 2
+
 calculateGhostNextDir :: Int -> PacmanGame -> Direction
 calculateGhostNextDir idx g
- | (ghostState g) !! idx == Returning = calculateNextDir g ((ghostPos g) !! idx) (0, 0)
+ | (ghostState g) !! idx == Returning = calculateNextDir g ((ghostPos g) !! idx) centerPos
  | otherwise = nextDir ((ghostDir g) !! idx)
 
 calculateNextDir :: PacmanGame -> (Int,Int) -> (Int,Int) -> Direction
@@ -197,7 +221,14 @@ calculateNextDir g (x,y) (tx,ty)
  | x > tx && canMove (x,y) West g = West
  | y < ty && canMove (x,y) South g = South
  | y > ty && canMove (x,y) North g = North
+ | mx >= my && canMove (x,y) South g = South
+ | mx >= my && canMove (x,y) North g = North
+ | my >= mx && canMove (x,y) East g = East
+ | my >= mx && canMove (x,y) West g = West
  | otherwise = None
+  where 
+    mx = abs $ x - tx
+    my = abs $ y - ty
 
 updatePacmanPos :: PacmanGame -> PacmanGame
 updatePacmanPos g
