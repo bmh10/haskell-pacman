@@ -58,7 +58,8 @@ data PacmanGame = Game
     score :: Int,
     lives :: Int,
     seconds :: Float,
-    gen :: StdGen
+    gen :: StdGen,
+    scaredTimer :: Int,
   } deriving Show 
 
 -- Tile functions
@@ -167,7 +168,7 @@ updateScore g
     tile = getTile x y g
     setBlankTile = setTile x y '_'
 
-setGhostsScared g = g {ghostState = replicate 4 Scared}
+setGhostsScared g = g {ghostState = replicate 4 Scared, scaredTimer = 50}
 setGhostReturning g idx = g {ghostState = setAtIdx idx Returning (ghostState g)}
 
 updatePacman g = updatePacmanPos g
@@ -179,13 +180,6 @@ updateGhosts n g = updateGhost n $ updateGhosts (n-1) g
 
 updateGhost :: Int -> PacmanGame -> PacmanGame
 updateGhost idx g = updateGhostPos idx $ updateGhostDir idx g
---  | atJunction (x, y) g  = g {ghostDir = setAtIdx idx (calculateGhostNextDir idx g) (ghostDir g)}
---  | canMove (x, y) dir g = g {ghostPos = setAtIdx idx (x', y') (ghostPos g)}
---  | otherwise            = g {ghostDir = setAtIdx idx (calculateGhostNextDir idx g) (ghostDir g)}
---  where
---    (x, y)   = (ghostPos g) !! idx
---    dir      = (ghostDir g) !! idx
---    (x', y') = move (x, y) dir
 
 updateGhostDir idx g
  | atJunction (x, y) ((ghostDir g) !! idx) g  = updateRandGen sg $ g {ghostDir = setAtIdx idx dir' (ghostDir g)}
@@ -229,7 +223,7 @@ calculateNextDir g (x,y) (tx,ty)
  | my >= mx && canMove (x,y) East g = East
  | my >= mx && canMove (x,y) West g = West
  | otherwise = None
-  where 
+  where
     mx = abs $ x - tx
     my = abs $ y - ty
 
