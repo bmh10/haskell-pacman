@@ -43,10 +43,8 @@ oppositeDir East  = West
 oppositeDir West  = East
 oppositeDir None  = None
 
-nextDir :: Direction -> Direction
-nextDir West = North
-nextDir None = None
-nextDir d = succ d 
+randomDir :: StdGen -> (Direction, StdGen)
+randomDir g = (toEnum $ r, g') where (r, g') = randomR (0,3) g
 
 data PacmanGame = Game
   { 
@@ -59,7 +57,8 @@ data PacmanGame = Game
     ghostState :: [PlayerState],
     score :: Int,
     lives :: Int,
-    seconds :: Float
+    seconds :: Float,
+    gen :: StdGen
   } deriving Show 
 
 -- Tile functions
@@ -189,12 +188,16 @@ updateGhost idx g = updateGhostPos idx $ updateGhostDir idx g
 --    (x', y') = move (x, y) dir
 
 updateGhostDir idx g
- | atJunction (x, y) ((ghostDir g) !! idx) g  = g {ghostDir = setAtIdx idx (calculateGhostNextDir idx g) (ghostDir g)}
+ | atJunction (x, y) ((ghostDir g) !! idx) g  = updateRandGen sg $ g {ghostDir = setAtIdx idx dir' (ghostDir g)}
  | otherwise = g
   where
     (x, y)   = (ghostPos g) !! idx
     dir      = (ghostDir g) !! idx
     (x', y') = move (x, y) dir
+    (dir', sg) = (calculateGhostNextDir idx g)
+    updateRandGen :: (Maybe StdGen) -> PacmanGame -> PacmanGame
+    updateRandGen Nothing g = g
+    updateRandGen (Just sg) g = g {gen = sg}
 
 updateGhostPos idx g
   | canMove (x, y) dir g = g {ghostPos = setAtIdx idx (x', y') (ghostPos g)}
@@ -208,12 +211,12 @@ atJunction (x, y) dir g =
   ((dir == North || dir == South) && (canMove (x, y) East g || canMove (x, y) West g)) ||
   ((dir == East || dir == West) && (canMove (x, y) North g || canMove (x, y) South g))
 
---(length $ filter (==True) $ [canMove (x, y) North g, canMove (x, y) East g, canMove (x, y) South g, canMove (x, y) West g]) > 2
-
-calculateGhostNextDir :: Int -> PacmanGame -> Direction
+calculateGhostNextDir :: Int -> PacmanGame -> (Direction, Maybe StdGen)
 calculateGhostNextDir idx g
- | (ghostState g) !! idx == Returning = calculateNextDir g ((ghostPos g) !! idx) centerPos
- | otherwise = nextDir ((ghostDir g) !! idx)
+ | (ghostState g) !! idx == Returning = (calculateNextDir g ((ghostPos g) !! idx) centerPos, Nothing)
+ | otherwise = (randDir, Just g')
+  where 
+    (randDir, g') = randomDir (gen g)
 
 calculateNextDir :: PacmanGame -> (Int,Int) -> (Int,Int) -> Direction
 calculateNextDir g (x,y) (tx,ty)
@@ -266,8 +269,9 @@ wrapx x
 initTiles = do 
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
+  stdGen <- newStdGen
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], ghostState = replicate 4 Normal, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None }
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], ghostState = replicate 4 Normal, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen}
   print rows
   hClose handle
   return initialState
