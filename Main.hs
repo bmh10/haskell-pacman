@@ -182,7 +182,7 @@ updateGhost :: Int -> PacmanGame -> PacmanGame
 updateGhost idx g = updateGhostState idx $ updateGhostPos idx $ updateGhostDir idx g
 
 updateGhostState idx g
- | (ghostState g) !! idx /= Normal && (scaredTimer g) > 50 = g {ghostState = setAtIdx idx Normal (ghostState g)}
+ | ((ghostState g) !! idx == Scared && (scaredTimer g) > 50) || ((ghostState g) !! idx == Returning && (ghostPos g) !! idx == centerPos) = g {ghostState = setAtIdx idx Normal (ghostState g)}
  | otherwise = g
 
 updateGhostDir idx g
