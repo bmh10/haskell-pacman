@@ -59,7 +59,7 @@ data PacmanGame = Game
     lives :: Int,
     seconds :: Float,
     gen :: StdGen,
-    scaredTimer :: Int,
+    scaredTimer :: Int
   } deriving Show 
 
 -- Tile functions
@@ -147,7 +147,7 @@ update :: Float -> PacmanGame -> PacmanGame
 update seconds game = updateScore $ updateLives $ updateGhosts 3 $ updateLives $ updatePacman $ updateSeconds game
 
 updateSeconds :: PacmanGame -> PacmanGame
-updateSeconds game = game {seconds = (seconds game) + 1}
+updateSeconds game = game {seconds = (seconds game) + 1, scaredTimer = (scaredTimer game) + 1}
 
 updateLives :: PacmanGame -> PacmanGame
 updateLives g
@@ -168,7 +168,7 @@ updateScore g
     tile = getTile x y g
     setBlankTile = setTile x y '_'
 
-setGhostsScared g = g {ghostState = replicate 4 Scared, scaredTimer = 50}
+setGhostsScared g = g {ghostState = replicate 4 Scared, scaredTimer = 0}
 setGhostReturning g idx = g {ghostState = setAtIdx idx Returning (ghostState g)}
 
 updatePacman g = updatePacmanPos g
@@ -179,7 +179,11 @@ updateGhosts 0 g = updateGhost 0 g
 updateGhosts n g = updateGhost n $ updateGhosts (n-1) g  
 
 updateGhost :: Int -> PacmanGame -> PacmanGame
-updateGhost idx g = updateGhostPos idx $ updateGhostDir idx g
+updateGhost idx g = updateGhostState idx $ updateGhostPos idx $ updateGhostDir idx g
+
+updateGhostState idx g
+ | (ghostState g) !! idx == Scared && (scaredTimer g) > 100 = g {ghostState = setAtIdx idx Normal (ghostState g)}
+ | otherwise = g
 
 updateGhostDir idx g
  | atJunction (x, y) ((ghostDir g) !! idx) g  = updateRandGen sg $ g {ghostDir = setAtIdx idx dir' (ghostDir g)}
@@ -265,7 +269,7 @@ initTiles = do
   contents <- hGetContents handle
   stdGen <- newStdGen
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], ghostState = replicate 4 Normal, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen}
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], ghostState = replicate 4 Normal, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0}
   print rows
   hClose handle
   return initialState
