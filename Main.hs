@@ -211,25 +211,27 @@ atJunction (x, y) dir g =
 
 calculateGhostNextDir :: Int -> PacmanGame -> (Direction, Maybe StdGen)
 calculateGhostNextDir idx g
- | (ghostState g) !! idx == Returning = (calculateNextDir g ((ghostDir g) !! idx) ((ghostPos g) !! idx) centerPos, Nothing)
+ | (ghostState g) !! idx == Returning = calculateNextDir g ((ghostDir g) !! idx) ((ghostPos g) !! idx) centerPos
+ | (ghostState g) !! idx == Normal = calculateNextDir g ((ghostDir g) !! idx) ((ghostPos g) !! idx) (pacmanPos g)
  | otherwise = (randDir, Just g')
   where 
     (randDir, g') = randomDir (gen g)
 
-calculateNextDir :: PacmanGame -> Direction -> (Int,Int) -> (Int,Int) -> Direction
+calculateNextDir :: PacmanGame -> Direction -> (Int,Int) -> (Int,Int) -> (Direction, Maybe StdGen)
 calculateNextDir g curDir (x,y) (tx,ty)
- | x < tx && canMove (x,y) East g && curDir /= West = East
- | x > tx && canMove (x,y) West g && curDir /= East = West
- | y < ty && canMove (x,y) South g && curDir /= North = South
- | y > ty && canMove (x,y) North g && curDir /= South = North
- | mx >= my && canMove (x,y) South g && curDir /= North = South
- | mx >= my && canMove (x,y) North g && curDir /= South = North
- | my >= mx && canMove (x,y) East g && curDir /= West = East
- | my >= mx && canMove (x,y) West g && curDir /= East = West
- | otherwise = None
+ | x < tx && canMove (x,y) East g && curDir /= West = (East, Nothing)
+ | x > tx && canMove (x,y) West g && curDir /= East = (West, Nothing)
+ | y < ty && canMove (x,y) South g && curDir /= North = (South, Nothing)
+ | y > ty && canMove (x,y) North g && curDir /= South = (North, Nothing)
+ | mx >= my && canMove (x,y) South g && curDir /= North = (South, Nothing)
+ | mx >= my && canMove (x,y) North g && curDir /= South = (North, Nothing)
+ | my >= mx && canMove (x,y) East g && curDir /= West = (East, Nothing)
+ | my >= mx && canMove (x,y) West g && curDir /= East = (West, Nothing)
+ | otherwise = (randDir, Just g')
   where
     mx = abs $ x - tx
     my = abs $ y - ty
+    (randDir, g') = randomDir (gen g)
 
 updatePacmanPos :: PacmanGame -> PacmanGame
 updatePacmanPos g
@@ -240,9 +242,6 @@ updatePacmanPos g
     dir = pacmanDir g
     nextDir = pacmanNextDir g
     (x, y) = pacmanPos g
-
---updateGhostPos :: PacmanGame -> Direction -> (Int, Int) -> (Int, Int)
---updateGhostPos g dir (x, y) = if canMove (x, y) dir g then move (x, y) dir else (x, y)
 
 move :: (Int, Int) -> Direction -> (Int, Int)
 move (x, y) None = (x, y)
