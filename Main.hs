@@ -212,10 +212,19 @@ atJunction (x, y) dir g =
 calculateGhostNextDir :: Int -> PacmanGame -> (Direction, Maybe StdGen)
 calculateGhostNextDir idx g
  | (ghostState g) !! idx == Returning = calculateNextDir g ((ghostDir g) !! idx) ((ghostPos g) !! idx) centerPos
- | (ghostState g) !! idx == Normal = calculateNextDir g ((ghostDir g) !! idx) ((ghostPos g) !! idx) (pacmanPos g)
+ | (ghostState g) !! idx == Normal = calculateNextDir g ((ghostDir g) !! idx) ((ghostPos g) !! idx) (getTileToTarget idx g)
  | otherwise = (randDir, Just g')
   where 
     (randDir, g') = randomDir (gen g)
+
+getTileToTarget idx g
+ | idx == 0 = (x, y)
+ | idx == 1 = (x-1, y-1)
+ | idx == 2 = (x+1, y+1)
+ | idx == 3 = (x+10, y-10)
+ | otherwise = (x, y)
+   where
+     (x, y) = pacmanPos g
 
 calculateNextDir :: PacmanGame -> Direction -> (Int,Int) -> (Int,Int) -> (Direction, Maybe StdGen)
 calculateNextDir g curDir (x,y) (tx,ty)
