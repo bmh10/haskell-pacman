@@ -182,7 +182,7 @@ updateGhost :: Int -> PacmanGame -> PacmanGame
 updateGhost idx g = updateGhostState idx $ updateGhostPos idx $ updateGhostDir idx g
 
 updateGhostState idx g
- | (ghostState g) !! idx == Scared && (scaredTimer g) > 25 = g {ghostState = setAtIdx idx Normal (ghostState g)}
+ | (ghostState g) !! idx == Scared && (scaredTimer g) > 50 = g {ghostState = setAtIdx idx Normal (ghostState g)}
  | otherwise = g
 
 updateGhostDir idx g
@@ -211,21 +211,21 @@ atJunction (x, y) dir g =
 
 calculateGhostNextDir :: Int -> PacmanGame -> (Direction, Maybe StdGen)
 calculateGhostNextDir idx g
- | (ghostState g) !! idx == Returning = (calculateNextDir g ((ghostPos g) !! idx) centerPos, Nothing)
+ | (ghostState g) !! idx == Returning = (calculateNextDir g ((ghostDir g) !! idx) ((ghostPos g) !! idx) centerPos, Nothing)
  | otherwise = (randDir, Just g')
   where 
     (randDir, g') = randomDir (gen g)
 
-calculateNextDir :: PacmanGame -> (Int,Int) -> (Int,Int) -> Direction
-calculateNextDir g (x,y) (tx,ty)
- | x < tx && canMove (x,y) East g = East
- | x > tx && canMove (x,y) West g = West
- | y < ty && canMove (x,y) South g = South
- | y > ty && canMove (x,y) North g = North
- | mx >= my && canMove (x,y) South g = South
- | mx >= my && canMove (x,y) North g = North
- | my >= mx && canMove (x,y) East g = East
- | my >= mx && canMove (x,y) West g = West
+calculateNextDir :: PacmanGame -> Direction -> (Int,Int) -> (Int,Int) -> Direction
+calculateNextDir g curDir (x,y) (tx,ty)
+ | x < tx && canMove (x,y) East g && curDir /= West = East
+ | x > tx && canMove (x,y) West g && curDir /= East = West
+ | y < ty && canMove (x,y) South g && curDir /= North = South
+ | y > ty && canMove (x,y) North g && curDir /= South = North
+ | mx >= my && canMove (x,y) South g && curDir /= North = South
+ | mx >= my && canMove (x,y) North g && curDir /= South = North
+ | my >= mx && canMove (x,y) East g && curDir /= West = East
+ | my >= mx && canMove (x,y) West g && curDir /= East = West
  | otherwise = None
   where
     mx = abs $ x - tx
