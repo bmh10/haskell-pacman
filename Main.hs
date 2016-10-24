@@ -19,7 +19,7 @@ offset = 100
 tileSize = 15
 maxTileHoriz = 27
 pacmanInitialPos = (13,23)
-redGhostInitialPos = (1,5)
+redGhostInitialPos = (14,11)
 blueGhostInitialPos = (15,15)
 centerPos = (14,14)
 yellowGhostInitialPos = (10,15)
@@ -59,7 +59,8 @@ data PacmanGame = Game
     lives :: Int,
     seconds :: Float,
     gen :: StdGen,
-    scaredTimer :: Int
+    scaredTimer :: Int,
+    paused :: Bool
   } deriving Show 
 
 -- Tile functions
@@ -136,6 +137,7 @@ handleKeys (EventKey (Char 'd') Down _ _) g = setPacmanDir East g
 handleKeys (EventKey (Char 'a') Down _ _) g = setPacmanDir West g
 handleKeys (EventKey (Char 'w') Down _ _) g = setPacmanDir North g
 handleKeys (EventKey (Char 's') Down _ _) g = setPacmanDir South g
+handleKeys (EventKey (Char 'p') Down _ _) g = g {paused = not (paused g)}
 handleKeys _ game = game
 
 setPacmanDir dir g
@@ -144,7 +146,9 @@ setPacmanDir dir g
 
 -- Have to update lives twice to prevent missed collision
 update :: Float -> PacmanGame -> PacmanGame
-update seconds game = updateScore $ updateLives $ updateGhosts 3 $ updateLives $ updatePacman $ updateSeconds game
+update seconds game
+ | (paused game) = game
+ | otherwise     = updateScore $ updateLives $ updateGhosts 3 $ updateLives $ updatePacman $ updateSeconds game
 
 updateSeconds :: PacmanGame -> PacmanGame
 updateSeconds game = game {seconds = (seconds game) + 1, scaredTimer = (scaredTimer game) + 1}
@@ -277,7 +281,7 @@ initTiles = do
   contents <- hGetContents handle
   stdGen <- newStdGen
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], ghostState = replicate 4 Normal, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0}
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], ghostState = replicate 4 Normal, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False}
   print rows
   hClose handle
   return initialState
