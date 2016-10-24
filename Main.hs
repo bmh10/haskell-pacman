@@ -190,11 +190,12 @@ updateGhostState idx g
  | otherwise = g
 
 updateGhostDir idx g
- | atJunction (x, y) ((ghostDir g) !! idx) g  = updateRandGen sg $ g {ghostDir = setAtIdx idx dir' (ghostDir g)}
+ | atJunction (x, y) dir state g  = updateRandGen sg $ g {ghostDir = setAtIdx idx dir' (ghostDir g)}
  | otherwise = g
   where
     (x, y)   = (ghostPos g) !! idx
     dir      = (ghostDir g) !! idx
+    state    = (ghostState g) !! idx
     (x', y') = move (x, y) dir
     (dir', sg) = (calculateGhostNextDir idx g)
     updateRandGen :: (Maybe StdGen) -> PacmanGame -> PacmanGame
@@ -202,23 +203,27 @@ updateGhostDir idx g
     updateRandGen (Just sg) g = g {gen = sg}
 
 updateGhostPos idx g
-  | canMove (x, y) dir g = g {ghostPos = setAtIdx idx (x', y') (ghostPos g)}
+  | canMove state (x, y) dir g = g {ghostPos = setAtIdx idx (x', y') (ghostPos g)}
   | otherwise = g
   where
     (x, y)   = (ghostPos g) !! idx
     dir      = (ghostDir g) !! idx
+    state    = (ghostState g) !! idx
     (x', y') = move (x, y) dir
   
-atJunction (x, y) dir g = 
-  ((dir == North || dir == South) && (canMove (x, y) East g || canMove (x, y) West g)) ||
-  ((dir == East || dir == West) && (canMove (x, y) North g || canMove (x, y) South g))
+atJunction (x, y) dir st g = 
+  ((dir == North || dir == South) && (canMove st (x, y) East g || canMove st (x, y) West g)) ||
+  ((dir == East || dir == West) && (canMove st (x, y) North g || canMove st (x, y) South g))
 
 calculateGhostNextDir :: Int -> PacmanGame -> (Direction, Maybe StdGen)
 calculateGhostNextDir idx g
- | (ghostState g) !! idx == Returning = calculateNextDir g ((ghostDir g) !! idx) ((ghostPos g) !! idx) centerPos
- | (ghostState g) !! idx == Normal = calculateNextDir g ((ghostDir g) !! idx) ((ghostPos g) !! idx) (getTileToTarget idx g)
+ | (ghostState g) !! idx == Returning = calculateNextDir g state dir pos centerPos
+ | (ghostState g) !! idx == Normal = calculateNextDir g state dir pos (getTileToTarget idx g)
  | otherwise = (randDir, Just g')
   where 
+    pos   = (ghostPos g) !! idx
+    dir      = (ghostDir g) !! idx
+    state    = (ghostState g) !! idx
     (randDir, g') = randomDir (gen g)
 
 getTileToTarget idx g
@@ -230,16 +235,16 @@ getTileToTarget idx g
    where
      (x, y) = pacmanPos g
 
-calculateNextDir :: PacmanGame -> Direction -> (Int,Int) -> (Int,Int) -> (Direction, Maybe StdGen)
-calculateNextDir g curDir (x,y) (tx,ty)
- | x < tx && canMove (x,y) East g && curDir /= West = (East, Nothing)
- | x > tx && canMove (x,y) West g && curDir /= East = (West, Nothing)
- | y < ty && canMove (x,y) South g && curDir /= North = (South, Nothing)
- | y > ty && canMove (x,y) North g && curDir /= South = (North, Nothing)
- | mx >= my && canMove (x,y) South g && curDir /= North = (South, Nothing)
- | mx >= my && canMove (x,y) North g && curDir /= South = (North, Nothing)
- | my >= mx && canMove (x,y) East g && curDir /= West = (East, Nothing)
- | my >= mx && canMove (x,y) West g && curDir /= East = (West, Nothing)
+calculateNextDir :: PacmanGame -> PlayerState -> Direction -> (Int,Int) -> (Int,Int) -> (Direction, Maybe StdGen)
+calculateNextDir g st curDir (x,y) (tx,ty)
+ | x < tx && canMove st (x,y) East g && curDir /= West = (East, Nothing)
+ | x > tx && canMove st (x,y) West g && curDir /= East = (West, Nothing)
+ | y < ty && canMove st (x,y) South g && curDir /= North = (South, Nothing)
+ | y > ty && canMove st (x,y) North g && curDir /= South = (North, Nothing)
+ | mx >= my && canMove st (x,y) South g && curDir /= North = (South, Nothing)
+ | mx >= my && canMove st (x,y) North g && curDir /= South = (North, Nothing)
+ | my >= mx && canMove st (x,y) East g && curDir /= West = (East, Nothing)
+ | my >= mx && canMove st (x,y) West g && curDir /= East = (West, Nothing)
  | otherwise = (randDir, Just g')
   where
     mx = abs $ x - tx
@@ -248,8 +253,8 @@ calculateNextDir g curDir (x,y) (tx,ty)
 
 updatePacmanPos :: PacmanGame -> PacmanGame
 updatePacmanPos g
- | canMove (x, y) nextDir g = g { pacmanPos = (move (x, y) nextDir), pacmanDir = nextDir, pacmanNextDir = None }
- | canMove (x, y) dir g     = g { pacmanPos = (move (x, y) dir) }
+ | canMove Normal (x, y) nextDir g = g { pacmanPos = (move (x, y) nextDir), pacmanDir = nextDir, pacmanNextDir = None }
+ | canMove Normal (x, y) dir g     = g { pacmanPos = (move (x, y) dir) }
  | otherwise                = g
   where
     dir = pacmanDir g
@@ -263,12 +268,12 @@ move (x, y) West = (wrapx $ x-1, y)
 move (x, y) North = (x, y-1)
 move (x, y) South = (x, y+1)
 
-canMove :: (Int, Int) -> Direction -> PacmanGame -> Bool
-canMove (x, y) None g = False
-canMove (x, y) dir g = canMoveTo g $ move (x, y) dir
+canMove :: PlayerState -> (Int, Int) -> Direction -> PacmanGame -> Bool
+canMove _ _ None _ = False
+canMove state (x, y) dir g = canMoveTo g state dir $ move (x, y) dir
 
-canMoveTo :: PacmanGame -> (Int, Int) -> Bool
-canMoveTo g (x, y) = getTile x y g /= 'x'
+canMoveTo :: PacmanGame -> PlayerState -> Direction -> (Int, Int) -> Bool
+canMoveTo g state dir (x, y) = getTile x y g /= 'x' && not (getTile x y g == '+' && dir == South && state /= Returning)
 
 wrapx x
  | x < 0 = maxTileHoriz
