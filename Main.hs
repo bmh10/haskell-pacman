@@ -19,9 +19,10 @@ offset = 100
 tileSize = 15
 maxTileHoriz = 27
 pacmanInitialPos = (13,23)
-redGhostInitialPos = (14,11)
+redGhostInitialPos = (13,11)
 blueGhostInitialPos = (15,15)
 centerPos = (14,14)
+aboveCenterPos = (14,11)
 yellowGhostInitialPos = (10,15)
 pinkGhostInitialPos = (13,14)
 pacmanInitialLives = 3
@@ -34,7 +35,7 @@ type Radius = Float
 type Position = (Float, Float)
 
 data Direction = North | East | South | West | None deriving (Enum, Eq, Show, Bounded)
-data PlayerState = Normal | Scared | Returning deriving (Eq, Show)
+data PlayerState = Normal | CenterZone | Scared | Returning deriving (Eq, Show)
 
 oppositeDir :: Direction -> Direction
 oppositeDir North = South
@@ -186,8 +187,12 @@ updateGhost :: Int -> PacmanGame -> PacmanGame
 updateGhost idx g = updateGhostState idx $ updateGhostPos idx $ updateGhostDir idx g
 
 updateGhostState idx g
- | ((ghostState g) !! idx == Scared && (scaredTimer g) > 50) || ((ghostState g) !! idx == Returning && (ghostPos g) !! idx == centerPos) = g {ghostState = setAtIdx idx Normal (ghostState g)}
+ | (ghostState g) !! idx == Scared && (scaredTimer g) > 50         = g {ghostState = setAtIdx idx Normal (ghostState g)}
+ | (ghostState g) !! idx == Returning && (x, y) == centerPos       = g {ghostState = setAtIdx idx CenterZone (ghostState g)}
+ | (ghostState g) !! idx == CenterZone && getTile x (y+1) g == '+' = g {ghostState = setAtIdx idx Normal (ghostState g)}
  | otherwise = g
+  where
+    (x, y) = (ghostPos g) !! idx
 
 updateGhostDir idx g
  | atJunction (x, y) dir state g  = updateRandGen sg $ g {ghostDir = setAtIdx idx dir' (ghostDir g)}
@@ -217,6 +222,7 @@ atJunction (x, y) dir st g =
 
 calculateGhostNextDir :: Int -> PacmanGame -> (Direction, Maybe StdGen)
 calculateGhostNextDir idx g
+ | (ghostState g) !! idx == CenterZone = calculateNextDir g state dir pos aboveCenterPos
  | (ghostState g) !! idx == Returning = calculateNextDir g state dir pos centerPos
  | (ghostState g) !! idx == Normal = calculateNextDir g state dir pos (getTileToTarget idx g)
  | otherwise = (randDir, Just g')
@@ -286,7 +292,7 @@ initTiles = do
   contents <- hGetContents handle
   stdGen <- newStdGen
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], ghostState = replicate 4 Normal, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False}
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], ghostState = replicate 4 CenterZone, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False}
   print rows
   hClose handle
   return initialState
