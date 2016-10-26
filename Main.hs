@@ -158,7 +158,7 @@ updateLives :: PacmanGame -> PacmanGame
 updateLives g
  | ghostIdx == Nothing = g
  | (ghostState g) !! (fromJust ghostIdx) /= Normal = setGhostReturning g (fromJust ghostIdx) 
- | otherwise = g {lives = (lives g) - 1}
+ | otherwise = resetGame $ g {lives = (lives g) - 1}
   where
     ghostIdx = elemIndex (pacmanPos g) (ghostPos g)
 
@@ -287,13 +287,15 @@ wrapx x
  | x > maxTileHoriz = 0
  | otherwise = x
 
+resetGame g = g { pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, seconds = 0, pacmanNextDir = None, scaredTimer = 0}
+
 -- Not sure why print is required...
 initTiles = do 
   handle <- openFile "2.lvl" ReadMode
   contents <- hGetContents handle
   stdGen <- newStdGen
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = [ghostInitialDir, ghostInitialDir, ghostInitialDir, ghostInitialDir], ghostState = replicate 4 CenterZone, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False}
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False}
   print rows
   hClose handle
   return initialState
