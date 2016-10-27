@@ -61,7 +61,8 @@ data PacmanGame = Game
     seconds :: Float,
     gen :: StdGen,
     scaredTimer :: Int,
-    paused :: Bool
+    paused :: Bool,
+    countdownTimer :: Int
   } deriving Show 
 
 -- Tile functions
@@ -106,10 +107,11 @@ getFile player dir state seconds
     step = if (mod (round seconds) 2) == 1 then "1" else "2"
 
 renderDashboard :: PacmanGame -> Picture
-renderDashboard g = pictures [scorePic, livesPic]
+renderDashboard g = pictures [scorePic, livesPic, countdownPic]
   where
     scorePic = color white $ translate (-50) (-fromIntegral height/2 + 5) $ scale 0.1 0.1 $ text $ show $ score g
     livesPic = color white $ translate 50 (-fromIntegral height/2 + 5) $ scale 0.1 0.1 $ text $ show $ lives g
+    countdownPic = if (countdownTimer g) > 0 then color white $ translate 0 10 $ scale 0.3 0.3 $ text $ show $ countdownTimer g else blank
 
 renderLevel :: PacmanGame -> Picture
 renderLevel game = renderLines (level game) 0
@@ -147,12 +149,16 @@ setPacmanDir dir g
 
 -- Have to update lives twice to prevent missed collision
 update :: Float -> PacmanGame -> PacmanGame
-update seconds game
+update secs game
  | (paused game) = game
+ | (countdownTimer game) > 0 = if (mod (round (seconds game)) 4) == 0 then decrementCountdown $ updateSeconds game  else updateSeconds $ game
  | otherwise     = updateScore $ updateLives $ updateGhosts 3 $ updateLives $ updatePacman $ updateSeconds game
 
 updateSeconds :: PacmanGame -> PacmanGame
 updateSeconds game = game {seconds = (seconds game) + 1, scaredTimer = (scaredTimer game) + 1}
+
+decrementCountdown :: PacmanGame -> PacmanGame
+decrementCountdown game = game {countdownTimer = (countdownTimer game) - 1}
 
 updateLives :: PacmanGame -> PacmanGame
 updateLives g
@@ -287,7 +293,7 @@ wrapx x
  | x > maxTileHoriz = 0
  | otherwise = x
 
-resetGame g = g { pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, seconds = 0, pacmanNextDir = None, scaredTimer = 0}
+resetGame g = g { pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, seconds = 0, pacmanNextDir = None, scaredTimer = 0, countdownTimer = 3}
 
 -- Not sure why print is required...
 initTiles = do 
@@ -295,7 +301,7 @@ initTiles = do
   contents <- hGetContents handle
   stdGen <- newStdGen
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False}
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False, countdownTimer = 3}
   print rows
   hClose handle
   return initialState
