@@ -76,6 +76,9 @@ setTile x y c g = g {level = updatedLevel}
   where 
     updatedLevel = setAtIdx y (setAtIdx x c ((level g) !! y)) (level g)
 
+-- TODO: more efficient to calculate coin count initially and decrement, rather than checking whole level every update
+isLevelComplete g = not $ foldl1 (||) $ map (elem '.') (level g)
+
 -- Map tile coords ((0,0) is top-left tile) to actual screen coords ((0, 0) is center of screen)
 tileToCoord :: (Int, Int) -> Position 
 tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/2, fromIntegral height/2 - fromIntegral y*tileSize - tileSize/2)
@@ -181,6 +184,7 @@ updateLives g
 
 updateScore :: PacmanGame -> PacmanGame
 updateScore g
+  | isLevelComplete g = g {gameState = Won}
   | tile == '.' = setBlankTile $ g { score = s+10 }
   | tile == 'o' = setGhostsScared $ setBlankTile $ g { score = s+50 }
   | otherwise = g
