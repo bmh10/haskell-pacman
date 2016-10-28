@@ -23,7 +23,7 @@ redGhostInitialPos = (13,11)
 blueGhostInitialPos = (15,15)
 centerPos = (14,14)
 aboveCenterPos = (14,11)
-yellowGhostInitialPos = (10,15)
+yellowGhostInitialPos = (11,15)
 pinkGhostInitialPos = (13,14)
 pacmanInitialLives = 3
 pacmanInitialDir = East
@@ -36,6 +36,7 @@ type Position = (Float, Float)
 
 data Direction = North | East | South | West | None deriving (Enum, Eq, Show, Bounded)
 data PlayerState = Normal | CenterZone | Scared | Returning deriving (Eq, Show)
+data GameState = Playing | Won | Lost deriving (Eq, Show) 
 
 oppositeDir :: Direction -> Direction
 oppositeDir North = South
@@ -62,7 +63,8 @@ data PacmanGame = Game
     gen :: StdGen,
     scaredTimer :: Int,
     paused :: Bool,
-    countdownTimer :: Int
+    countdownTimer :: Int,
+    gameState :: GameState
   } deriving Show 
 
 -- Tile functions
@@ -89,7 +91,8 @@ render g = pictures [renderLevel g,
                      renderPlayer "blueGhost" ((ghostPos g) !! 1) ((ghostDir g) !! 1) ((ghostState g) !! 1) (seconds g),
                      renderPlayer "yellowGhost" ((ghostPos g) !! 2) ((ghostDir g) !! 2) ((ghostState g) !! 2) (seconds g),
                      renderPlayer "pinkGhost" ((ghostPos g) !! 3) ((ghostDir g) !! 3) ((ghostState g) !! 3) (seconds g),
-                     renderDashboard g]
+                     renderDashboard g,
+                     renderMessage g]
 
 renderPlayer :: String -> (Int, Int) -> Direction -> PlayerState -> Float -> Picture 
 renderPlayer player (x, y) dir state seconds = translate x' y' $ GG.png file
@@ -107,11 +110,17 @@ getFile player dir state seconds
     step = if (mod (round seconds) 2) == 1 then "1" else "2"
 
 renderDashboard :: PacmanGame -> Picture
-renderDashboard g = pictures [scorePic, livesPic, countdownPic]
+renderDashboard g = pictures [scorePic, livesPic]
   where
     scorePic = color white $ translate (-50) (-fromIntegral height/2 + 5) $ scale 0.1 0.1 $ text $ show $ score g
     livesPic = color white $ translate 50 (-fromIntegral height/2 + 5) $ scale 0.1 0.1 $ text $ show $ lives g
+
+renderMessage :: PacmanGame -> Picture
+renderMessage g = pictures [countdownPic, statusMsg]
+  where 
     countdownPic = if (countdownTimer g) > 0 then color white $ translate 0 10 $ scale 0.3 0.3 $ text $ show $ countdownTimer g else blank
+    statusMsg    = if (gameState g) /= Playing then color white $ translate (-100) 10 $ scale 0.3 0.3 $ text msg else blank
+    msg          = if (gameState g) == Won then "You won" else "Game Over"
 
 renderLevel :: PacmanGame -> Picture
 renderLevel game = renderLines (level game) 0
@@ -151,6 +160,7 @@ setPacmanDir dir g
 update :: Float -> PacmanGame -> PacmanGame
 update secs game
  | (paused game) = game
+ | (gameState game) /= Playing = game
  | (countdownTimer game) > 0 = if (mod (round (seconds game)) 4) == 0 then decrementCountdown $ updateSeconds game  else updateSeconds $ game
  | otherwise     = updateScore $ updateLives $ updateGhosts 3 $ updateLives $ updatePacman $ updateSeconds game
 
@@ -164,7 +174,8 @@ updateLives :: PacmanGame -> PacmanGame
 updateLives g
  | ghostIdx == Nothing = g
  | (ghostState g) !! (fromJust ghostIdx) /= Normal = setGhostReturning g (fromJust ghostIdx) 
- | otherwise = resetGame $ g {lives = (lives g) - 1}
+ | (lives g) > 1 = resetGame $ g {lives = (lives g) - 1}
+ | otherwise     = g {lives = 0, gameState = Lost}
   where
     ghostIdx = elemIndex (pacmanPos g) (ghostPos g)
 
@@ -301,7 +312,7 @@ initTiles = do
   contents <- hGetContents handle
   stdGen <- newStdGen
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False, countdownTimer = 3}
+  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False, countdownTimer = 3, gameState = Playing}
   print rows
   hClose handle
   return initialState
