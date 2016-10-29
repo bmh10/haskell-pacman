@@ -79,6 +79,9 @@ setTile x y c g = g {level = updatedLevel}
 -- TODO: more efficient to calculate coin count initially and decrement, rather than checking whole level every update
 isLevelComplete g = not $ foldl1 (||) $ map (elem '.') (level g)
 
+onTick :: PacmanGame -> Bool -> Int -> a -> a -> a 
+onTick g c t a b = if (c && (mod (round (seconds g)) t) == 0) then a else b
+
 -- Map tile coords ((0,0) is top-left tile) to actual screen coords ((0, 0) is center of screen)
 tileToCoord :: (Int, Int) -> Position 
 tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/2, fromIntegral height/2 - fromIntegral y*tileSize - tileSize/2)
@@ -89,28 +92,28 @@ setAtIdx idx val xs = take idx xs ++ [val] ++ drop (idx+1) xs
 -- Rendering
 render :: PacmanGame -> Picture 
 render g = pictures [renderLevel g, 
-                     renderPlayer "pacman" (pacmanPos g) (pacmanDir g) Normal (seconds g),
-                     renderPlayer "redGhost" ((ghostPos g) !! 0) ((ghostDir g) !! 0) ((ghostState g) !! 0) (seconds g),
-                     renderPlayer "blueGhost" ((ghostPos g) !! 1) ((ghostDir g) !! 1) ((ghostState g) !! 1) (seconds g),
-                     renderPlayer "yellowGhost" ((ghostPos g) !! 2) ((ghostDir g) !! 2) ((ghostState g) !! 2) (seconds g),
-                     renderPlayer "pinkGhost" ((ghostPos g) !! 3) ((ghostDir g) !! 3) ((ghostState g) !! 3) (seconds g),
+                     renderPlayer "pacman" (pacmanPos g) (pacmanDir g) Normal g,
+                     renderPlayer "redGhost" ((ghostPos g) !! 0) ((ghostDir g) !! 0) ((ghostState g) !! 0) g,
+                     renderPlayer "blueGhost" ((ghostPos g) !! 1) ((ghostDir g) !! 1) ((ghostState g) !! 1) g,
+                     renderPlayer "yellowGhost" ((ghostPos g) !! 2) ((ghostDir g) !! 2) ((ghostState g) !! 2) g,
+                     renderPlayer "pinkGhost" ((ghostPos g) !! 3) ((ghostDir g) !! 3) ((ghostState g) !! 3) g,
                      renderDashboard g,
                      renderMessage g]
 
-renderPlayer :: String -> (Int, Int) -> Direction -> PlayerState -> Float -> Picture 
-renderPlayer player (x, y) dir state seconds = translate x' y' $ GG.png file
+renderPlayer :: String -> (Int, Int) -> Direction -> PlayerState -> PacmanGame -> Picture 
+renderPlayer player (x, y) dir state game = translate x' y' $ GG.png file
   where 
     (x', y') = tileToCoord (x, y)
-    file = getFile player dir state seconds
+    file = getFile player dir state game
 
 -- TODO: should preload images
-getFile :: String -> Direction -> PlayerState -> Float -> String
-getFile player dir state seconds
+getFile :: String -> Direction -> PlayerState -> PacmanGame -> String
+getFile player dir state game
  | state == Scared = "img/scaredGhost" ++ step ++ ".png"
  | state == Returning = "img/eyes.png"
  | otherwise = "img/" ++ player ++ show dir ++ step ++ ".png"
   where 
-    step = if (mod (round seconds) 2) == 1 then "1" else "2"
+    step = onTick game True 2 "1" "2"
 
 renderDashboard :: PacmanGame -> Picture
 renderDashboard g = pictures [scorePic, livesPic]
@@ -166,7 +169,7 @@ update :: Float -> PacmanGame -> PacmanGame
 update secs game
  | (paused game) = game
  | (gameState game) /= Playing = game
- | (countdownTimer game) > 0 = if (mod (round (seconds game)) 4) == 0 then decrementCountdown $ updateSeconds game  else updateSeconds $ game
+ | (countdownTimer game) > 0 = onTick game True 4 (decrementCountdown $ updateSeconds game) (updateSeconds $ game)
  | otherwise     = updateScore $ updateLives $ updateGhosts 3 $ updateLives $ updatePacman $ updateSeconds game
 
 updateSeconds :: PacmanGame -> PacmanGame
@@ -238,8 +241,8 @@ updateGhostPos idx g
     (x, y)   = (ghostPos g) !! idx
     dir      = (ghostDir g) !! idx
     state    = (ghostState g) !! idx
-    (x', y') = if state == Scared && (mod (round (seconds g)) 2) == 0 then (x, y) else move (x, y) dir
-  
+    (x', y') = onTick g (state == Scared) 2 (x, y) (move (x, y) dir)
+
 atJunction (x, y) dir st g = 
   ((dir == North || dir == South) && (canMove st (x, y) East g || canMove st (x, y) West g)) ||
   ((dir == East || dir == West) && (canMove st (x, y) North g || canMove st (x, y) South g))
