@@ -238,7 +238,7 @@ updateGhostPos idx g
     (x, y)   = (ghostPos g) !! idx
     dir      = (ghostDir g) !! idx
     state    = (ghostState g) !! idx
-    (x', y') = move (x, y) dir
+    (x', y') = if state == Scared && (mod (round (seconds g)) 2) == 0 then (x, y) else move (x, y) dir
   
 atJunction (x, y) dir st g = 
   ((dir == North || dir == South) && (canMove st (x, y) East g || canMove st (x, y) West g)) ||
