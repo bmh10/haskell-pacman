@@ -1,4 +1,4 @@
 haskell-pacman
 --------------
 
-[screenshot](img/screenshot.png)
+![screenshot](img/screenshot.png)
