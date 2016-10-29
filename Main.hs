@@ -11,6 +11,8 @@ import Data.Fixed
 import Data.List
 import Data.Maybe
 
+-- TODO: 1. Bonus points for eating scared ghosts 2. Refactor code 3. Screenshot readme
+
 fps = 5
 width = 420 -- 28 * 15
 height = 465 + dashboardHeight -- 31 * 15
@@ -51,6 +53,7 @@ randomDir g = (toEnum $ r, g') where (r, g') = randomR (0,3) g
 data PacmanGame = Game
   { 
     level :: [String],      -- Level layout
+    initialLevel :: [String], -- Level layout (not changing)
     pacmanPos :: (Int, Int), -- Tile coord of pacman
     pacmanDir :: Direction,  -- Pacman's direction of travel
     pacmanNextDir :: Direction, -- Buffered next direction
@@ -64,7 +67,8 @@ data PacmanGame = Game
     scaredTimer :: Int,
     paused :: Bool,
     countdownTimer :: Int,
-    gameState :: GameState
+    gameState :: GameState,
+    coinCount :: Int
   } deriving Show 
 
 -- Tile functions
@@ -76,8 +80,7 @@ setTile x y c g = g {level = updatedLevel}
   where 
     updatedLevel = setAtIdx y (setAtIdx x c ((level g) !! y)) (level g)
 
--- TODO: more efficient to calculate coin count initially and decrement, rather than checking whole level every update
-isLevelComplete g = not $ foldl1 (||) $ map (elem '.') (level g)
+countCoins level = foldl (\acc x -> acc + length x) 0 $ map (filter (=='.')) level
 
 onTick :: PacmanGame -> Bool -> Int -> a -> a -> a 
 onTick g c t a b = if (c && (mod (round (seconds g)) t) == 0) then a else b
@@ -189,9 +192,9 @@ updateLives g
 
 updateScore :: PacmanGame -> PacmanGame
 updateScore g
-  | isLevelComplete g = g {gameState = Won}
-  | tile == '.' = setBlankTile $ g { score = s+10 }
-  | tile == 'o' = setGhostsScared $ setBlankTile $ g { score = s+50 }
+  | coinCount g == 0 = g {gameState = Won}
+  | tile == '.' = setBlankTile $ g { score = s + 10, coinCount = (coinCount g) - 1 }
+  | tile == 'o' = setGhostsScared $ setBlankTile $ g { score = s + 50 }
   | otherwise = g
   where
     (x, y) = pacmanPos g
@@ -315,7 +318,7 @@ wrapx x
 
 resetGame g = g { pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, seconds = 0, pacmanNextDir = None, scaredTimer = 0, countdownTimer = 3}
 
-resetGameFully g = resetGame $ g {gameState = Playing, lives = pacmanInitialLives, score = 0}
+resetGameFully g = resetGame $ g {gameState = Playing, lives = pacmanInitialLives, score = 0, level = (initialLevel g), coinCount = countCoins (initialLevel g)}
 
 -- Not sure why print is required...
 initTiles = do 
@@ -323,7 +326,7 @@ initTiles = do
   contents <- hGetContents handle
   stdGen <- newStdGen
   let rows = words contents
-  let initialState = Game { level = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False, countdownTimer = 3, gameState = Playing}
+  let initialState = Game { level = rows, initialLevel = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False, countdownTimer = 3, gameState = Playing, coinCount = countCoins rows }
   print rows
   hClose handle
   return initialState
