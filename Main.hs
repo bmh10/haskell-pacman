@@ -10,9 +10,13 @@ import Control.Monad
 import Data.Fixed
 import Data.List
 import Data.Maybe
-
--- TODO: 1. Bonus points for eating scared ghosts 2. Refactor code 3. Screenshot readme
-
+{-
+ TODO: 
+   1. Bonus points for eating scared ghosts
+   2. Better dashboard
+   3. Refactor code
+   4. Update Screenshot
+-}
 fps = 5
 width = 420 -- 28 * 15
 height = 465 + dashboardHeight -- 31 * 15
