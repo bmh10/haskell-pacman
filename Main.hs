@@ -153,7 +153,9 @@ handleKeys (EventKey (Char 'a') Down _ _) g = setPacmanDir West g
 handleKeys (EventKey (Char 'w') Down _ _) g = setPacmanDir North g
 handleKeys (EventKey (Char 's') Down _ _) g = setPacmanDir South g
 handleKeys (EventKey (Char 'p') Down _ _) g = g {paused = not (paused g)}
-handleKeys _ game = game
+handleKeys _ game
+ | (gameState game) /= Playing = resetGameFully game
+ | otherwise = game
 
 setPacmanDir dir g
  | (pacmanDir g) == oppositeDir dir = g { pacmanDir = dir, pacmanNextDir = None } 
@@ -309,6 +311,8 @@ wrapx x
  | otherwise = x
 
 resetGame g = g { pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, seconds = 0, pacmanNextDir = None, scaredTimer = 0, countdownTimer = 3}
+
+resetGameFully g = resetGame $ g {gameState = Playing, lives = pacmanInitialLives, score = 0}
 
 -- Not sure why print is required...
 initTiles = do 
