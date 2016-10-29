@@ -13,9 +13,8 @@ import Data.Maybe
 {-
  TODO: 
    1. Bonus points for eating scared ghosts
-   2. Better dashboard
-   3. Refactor code
-   4. Update Screenshot
+   2. Refactor code
+   3. Update Screenshot
 -}
 fps = 5
 width = 420 -- 28 * 15
@@ -123,10 +122,15 @@ getFile player dir state game
     step = onTick game True 2 "1" "2"
 
 renderDashboard :: PacmanGame -> Picture
-renderDashboard g = pictures [scorePic, livesPic]
+renderDashboard g = pictures $ [scorePic, livesTxt] ++ livesPic
   where
-    scorePic = color white $ translate (-50) (-fromIntegral height/2 + 5) $ scale 0.1 0.1 $ text $ show $ score g
-    livesPic = color white $ translate 50 (-fromIntegral height/2 + 5) $ scale 0.1 0.1 $ text $ show $ lives g
+    scorePic = color white $ translate (-80) (-fromIntegral height/2 + 5) $ scale 0.1 0.1 $ text $ "Score: " ++ (show $ score g)
+    livesTxt = color white $ translate 20 (-fromIntegral height/2 + 5) $ scale 0.1 0.1 $ text "Lives:"
+    livesPic = genLivesPic (lives g)
+
+    genLivesPic :: Int -> [Picture]
+    genLivesPic 0 = [blank]
+    genLivesPic n = (translate (50 + fromIntegral n*tileSize) (-fromIntegral height/2 + 10) $ GG.png "img/pacmanEast2.png") : genLivesPic (n-1)
 
 renderMessage :: PacmanGame -> Picture
 renderMessage g = pictures [countdownPic, statusMsg]
