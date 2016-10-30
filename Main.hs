@@ -12,9 +12,7 @@ import Data.List
 import Data.Maybe
 {-
  TODO: 
-   1. Dir keys for movement
-   2. Refactor code
-   3. Update Screenshot
+   1. Refactor code
 -}
 fps = 5
 width = 420 -- 28 * 15
