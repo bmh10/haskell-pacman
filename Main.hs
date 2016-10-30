@@ -12,7 +12,7 @@ import Data.List
 import Data.Maybe
 {-
  TODO: 
-   1. Bonus points for eating scared ghosts
+   1. Dir keys for movement
    2. Refactor code
    3. Update Screenshot
 -}
@@ -71,7 +71,8 @@ data PacmanGame = Game
     paused :: Bool,
     countdownTimer :: Int,
     gameState :: GameState,
-    coinCount :: Int
+    coinCount :: Int,
+    ghostEatenCount :: Int
   } deriving Show 
 
 -- Tile functions
@@ -189,20 +190,23 @@ updateSeconds game = game {seconds = (seconds game) + 1, scaredTimer = (scaredTi
 decrementCountdown :: PacmanGame -> PacmanGame
 decrementCountdown game = game {countdownTimer = (countdownTimer game) - 1}
 
+-- TODO: separate ghost state update  from lives update
 updateLives :: PacmanGame -> PacmanGame
 updateLives g
  | ghostIdx == Nothing = g
- | (ghostState g) !! (fromJust ghostIdx) /= Normal = setGhostReturning g (fromJust ghostIdx) 
- | (lives g) > 1 = resetGame $ g {lives = (lives g) - 1}
- | otherwise     = g {lives = 0, gameState = Lost}
+ | state == Returning  = g
+ | state == Scared     = setGhostReturning g (fromJust ghostIdx) 
+ | (lives g) > 1       = resetGame $ g {lives = (lives g) - 1}
+ | otherwise           = g {lives = 0, gameState = Lost}
   where
     ghostIdx = elemIndex (pacmanPos g) (ghostPos g)
+    state    = (ghostState g) !! (fromJust ghostIdx)
 
 updateScore :: PacmanGame -> PacmanGame
 updateScore g
   | coinCount g == 0 = g {gameState = Won}
   | tile == '.' = setBlankTile $ g { score = s + 10, coinCount = (coinCount g) - 1 }
-  | tile == 'o' = setGhostsScared $ setBlankTile $ g { score = s + 50 }
+  | tile == 'o' = setGhostsScared $ setBlankTile $ g { score = s + 50, ghostEatenCount = 0 }
   | otherwise = g
   where
     (x, y) = pacmanPos g
@@ -211,14 +215,19 @@ updateScore g
     setBlankTile = setTile x y '_'
 
 setGhostsScared g = g {ghostState = replicate 4 Scared, scaredTimer = 0}
-setGhostReturning g idx = g {ghostState = setAtIdx idx Returning (ghostState g)}
+setGhostReturning g idx = g {ghostState = setAtIdx idx Returning (ghostState g), ghostEatenCount = newEatenCount, score = newScore}
+  where
+    newEatenCount = (ghostEatenCount g) + 1
+    newScore      = (score g) + calcBonus newEatenCount
+    calcBonus 1 = 200
+    calcBonus n = calcBonus (n-1) * 2
 
 updatePacman g = updatePacmanPos g
 
 -- If ghost does not move after update (e.g. hit a wall), change direction then update again
 updateGhosts :: Int -> PacmanGame -> PacmanGame
 updateGhosts 0 g = updateGhost 0 g
-updateGhosts n g = updateGhost n $ updateGhosts (n-1) g  
+updateGhosts n g = updateGhost n $ updateGhosts (n-1) g
 
 updateGhost :: Int -> PacmanGame -> PacmanGame
 updateGhost idx g = updateGhostState idx $ updateGhostPos idx $ updateGhostDir idx g
@@ -334,7 +343,7 @@ initTiles = do
   contents <- hGetContents handle
   stdGen <- newStdGen
   let rows = words contents
-  let initialState = Game { level = rows, initialLevel = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False, countdownTimer = 3, gameState = Playing, coinCount = countCoins rows }
+  let initialState = Game { level = rows, initialLevel = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False, countdownTimer = 3, gameState = Playing, coinCount = countCoins rows, ghostEatenCount = 0 }
   print rows
   hClose handle
   return initialState
