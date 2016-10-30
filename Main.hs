@@ -163,10 +163,10 @@ renderTile c x y
 
 -- Event handling
 handleKeys :: Event -> PacmanGame -> PacmanGame
-handleKeys (EventKey (Char 'd') Down _ _) g = setPacmanDir East g
-handleKeys (EventKey (Char 'a') Down _ _) g = setPacmanDir West g
-handleKeys (EventKey (Char 'w') Down _ _) g = setPacmanDir North g
-handleKeys (EventKey (Char 's') Down _ _) g = setPacmanDir South g
+handleKeys (EventKey (SpecialKey KeyRight) Down _ _) g = setPacmanDir East g
+handleKeys (EventKey (SpecialKey KeyLeft) Down _ _) g = setPacmanDir West g
+handleKeys (EventKey (SpecialKey KeyUp) Down _ _) g = setPacmanDir North g
+handleKeys (EventKey (SpecialKey KeyDown) Down _ _) g = setPacmanDir South g
 handleKeys (EventKey (Char 'p') Down _ _) g = g {paused = not (paused g)}
 handleKeys _ game
  | (gameState game) /= Playing = resetGameFully game
