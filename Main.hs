@@ -34,9 +34,6 @@ ghostInitialDir = East
 window = InWindow "Pacman" (width, height) (offset, offset)
 background = black
 
-type Radius = Float 
-type Position = (Float, Float)
-
 data Direction = North | East | South | West | None deriving (Enum, Eq, Show, Bounded)
 data PlayerState = Normal | CenterZone | Scared | Returning deriving (Eq, Show)
 data GameState = Playing | Won | Lost deriving (Eq, Show) 
@@ -53,24 +50,24 @@ randomDir g = (toEnum $ r, g') where (r, g') = randomR (0,3) g
 
 data PacmanGame = Game
   { 
-    level :: [String],      -- Level layout
-    initialLevel :: [String], -- Level layout (not changing)
-    pacmanPos :: (Int, Int), -- Tile coord of pacman
-    pacmanDir :: Direction,  -- Pacman's direction of travel
-    pacmanNextDir :: Direction, -- Buffered next direction
-    ghostPos :: [(Int, Int)],
-    ghostDir :: [Direction],
-    ghostState :: [PlayerState],
-    score :: Int,
-    lives :: Int,
-    seconds :: Float,
-    gen :: StdGen,
-    scaredTimer :: Int,
-    paused :: Bool,
-    countdownTimer :: Int,
-    gameState :: GameState,
-    coinCount :: Int,
-    ghostEatenCount :: Int
+    level :: [String],           -- Updated level layout
+    initialLevel :: [String],    -- Initial level layout
+    pacmanPos :: (Int, Int),     -- Tile coord of pacman
+    pacmanDir :: Direction,      -- Pacman's direction of travel
+    pacmanNextDir :: Direction,  -- Buffered next direction
+    ghostPos :: [(Int, Int)],    -- Position of all ghosts
+    ghostDir :: [Direction],     -- Direction of all ghosts
+    ghostState :: [PlayerState], -- State of all ghosts
+    score :: Int,                -- Current score 
+    lives :: Int,                -- Current lives
+    seconds :: Float,            -- Game timer
+    gen :: StdGen,               -- Random number generator
+    scaredTimer :: Int,          -- Scared ghost timer
+    paused :: Bool,              -- Paused or not
+    countdownTimer :: Int,       -- Start of game timer
+    gameState :: GameState,      -- State of the game
+    coinCount :: Int,            -- Number of remaining coins
+    ghostEatenCount :: Int       -- Numbers of ghosts eaten
   } deriving Show 
 
 -- Tile functions
@@ -79,16 +76,16 @@ getTile x y g = (level g) !! y !! x
 
 setTile :: Int -> Int -> Char -> PacmanGame -> PacmanGame
 setTile x y c g = g {level = updatedLevel}
-  where 
-    updatedLevel = setAtIdx y (setAtIdx x c ((level g) !! y)) (level g)
+  where updatedLevel = setAtIdx y (setAtIdx x c ((level g) !! y)) (level g)
 
+countCoins :: [String] -> Int
 countCoins level = foldl (\acc x -> acc + length x) 0 $ map (filter (=='.')) level
 
 onTick :: PacmanGame -> Bool -> Int -> a -> a -> a 
 onTick g c t a b = if (c && (mod (round (seconds g)) t) == 0) then a else b
 
 -- Map tile coords ((0,0) is top-left tile) to actual screen coords ((0, 0) is center of screen)
-tileToCoord :: (Int, Int) -> Position 
+tileToCoord :: (Int, Int) -> (Float, Float) 
 tileToCoord (x, y) = (fromIntegral x*tileSize + tileSize/2 - fromIntegral width/2, fromIntegral height/2 - fromIntegral y*tileSize - tileSize/2)
 
 setAtIdx :: Int -> a -> [a] -> [a]
@@ -337,7 +334,7 @@ resetGameFully g = resetGame $ g {gameState = Playing, lives = pacmanInitialLive
 
 -- Not sure why print is required...
 initTiles = do 
-  handle <- openFile "2.lvl" ReadMode
+  handle <- openFile "pacman.lvl" ReadMode
   contents <- hGetContents handle
   stdGen <- newStdGen
   let rows = words contents
