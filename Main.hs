@@ -158,10 +158,10 @@ renderTile c x y
 
 -- Event handling
 handleKeys :: Event -> PacmanGame -> PacmanGame
-handleKeys (EventKey (SpecialKey KeyRight) Down _ _) g = setPacmanDir East g
-handleKeys (EventKey (SpecialKey KeyLeft) Down _ _) g = setPacmanDir West g
-handleKeys (EventKey (SpecialKey KeyUp) Down _ _) g = setPacmanDir North g
-handleKeys (EventKey (SpecialKey KeyDown) Down _ _) g = setPacmanDir South g
+handleKeys (EventKey (SpecialKey KeyRight) Down _ _) g  = setPacmanDir East g
+handleKeys (EventKey (SpecialKey KeyLeft) Down _ _) g   = setPacmanDir West g
+handleKeys (EventKey (SpecialKey KeyUp) Down _ _) g     = setPacmanDir North g
+handleKeys (EventKey (SpecialKey KeyDown) Down _ _) g   = setPacmanDir South g
 handleKeys (EventKey (Char 'p') Down _ _) g = g {paused = not (paused g)}
 handleKeys _ game
  | (gameState game) /= Playing = resetGameFully game
@@ -174,10 +174,10 @@ setPacmanDir dir g
 -- Have to update lives twice to prevent missed collision
 update :: Float -> PacmanGame -> PacmanGame
 update secs game
- | (paused game) = game
+ | (paused game)               = game
  | (gameState game) /= Playing = game
- | (countdownTimer game) > 0 = onTick game True 4 (decrementCountdown $ updateSeconds game) (updateSeconds $ game)
- | otherwise     = updateScore $ updateLives $ updateGhosts 3 $ updateLives $ updatePacman $ updateSeconds game
+ | (countdownTimer game) > 0   = onTick game True 4 (decrementCountdown $ updateSeconds game) (updateSeconds $ game)
+ | otherwise                   = updateScore $ updateLives $ updateGhosts 3 $ updateLives $ updatePacman $ updateSeconds game
 
 updateSeconds :: PacmanGame -> PacmanGame
 updateSeconds game = game {seconds = (seconds game) + 1, scaredTimer = (scaredTimer game) + 1}
@@ -200,9 +200,9 @@ updateLives g
 updateScore :: PacmanGame -> PacmanGame
 updateScore g
   | coinCount g == 0 = g {gameState = Won}
-  | tile == '.' = setBlankTile $ g { score = s + 10, coinCount = (coinCount g) - 1 }
-  | tile == 'o' = setGhostsScared $ setBlankTile $ g { score = s + 50, ghostEatenCount = 0 }
-  | otherwise = g
+  | tile == '.'      = setBlankTile $ g { score = s + 10, coinCount = (coinCount g) - 1 }
+  | tile == 'o'      = setGhostsScared $ setBlankTile $ g { score = s + 50, ghostEatenCount = 0 }
+  | otherwise        = g
   where
     (x, y) = pacmanPos g
     s = score g
