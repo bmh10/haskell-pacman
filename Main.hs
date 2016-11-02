@@ -334,13 +334,11 @@ resetGameFully g = resetGame $ g {gameState = Playing, lives = pacmanInitialLive
 
 -- Not sure why print is required...
 initTiles = do 
-  handle <- openFile "pacman.lvl" ReadMode
-  contents <- hGetContents handle
+  contents <- readFile "pacman.lvl"
   stdGen <- newStdGen
   let rows = words contents
   let initialState = Game { level = rows, initialLevel = rows, pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, score = 0, seconds = 0, lives = pacmanInitialLives, pacmanNextDir = None, gen = stdGen, scaredTimer = 0, paused = False, countdownTimer = 3, gameState = Playing, coinCount = countCoins rows, ghostEatenCount = 0 }
   print rows
-  hClose handle
   return initialState
 
 main = do
