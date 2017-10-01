@@ -10,10 +10,7 @@ import Control.Monad
 import Data.Fixed
 import Data.List
 import Data.Maybe
-{-
- TODO: 
-   1. Refactor code
--}
+
 fps = 5
 width = 420 -- 28 * 15
 height = 465 + dashboardHeight -- 31 * 15
@@ -167,6 +164,7 @@ handleKeys _ game
  | (gameState game) /= Playing = resetGameFully game
  | otherwise = game
 
+setPacmanDir :: Direction -> PacmanGame -> PacmanGame
 setPacmanDir dir g
  | (pacmanDir g) == oppositeDir dir = g { pacmanDir = dir, pacmanNextDir = None } 
  | otherwise                        = g { pacmanNextDir = dir }
@@ -185,7 +183,7 @@ updateSeconds game = game {seconds = (seconds game) + 1, scaredTimer = (scaredTi
 decrementCountdown :: PacmanGame -> PacmanGame
 decrementCountdown game = game {countdownTimer = (countdownTimer game) - 1}
 
--- TODO: separate ghost state update  from lives update
+-- TODO: separate ghost state update from lives update
 updateLives :: PacmanGame -> PacmanGame
 updateLives g
  | ghostIdx == Nothing = g
@@ -209,7 +207,10 @@ updateScore g
     tile = getTile x y g
     setBlankTile = setTile x y '_'
 
+setGhostsScared :: PacmanGame -> PacmanGame
 setGhostsScared g = g {ghostState = replicate 4 Scared, scaredTimer = 0}
+
+setGhostReturning :: PacmanGame -> Int -> PacmanGame
 setGhostReturning g idx = g {ghostState = setAtIdx idx Returning (ghostState g), ghostEatenCount = newEatenCount, score = newScore}
   where
     newEatenCount = (ghostEatenCount g) + 1
@@ -217,6 +218,7 @@ setGhostReturning g idx = g {ghostState = setAtIdx idx Returning (ghostState g),
     calcBonus 1 = 200
     calcBonus n = calcBonus (n-1) * 2
 
+updatePacman :: PacmanGame -> PacmanGame
 updatePacman g = updatePacmanPos g
 
 -- If ghost does not move after update (e.g. hit a wall), change direction then update again
@@ -227,6 +229,7 @@ updateGhosts n g = updateGhost n $ updateGhosts (n-1) g
 updateGhost :: Int -> PacmanGame -> PacmanGame
 updateGhost idx g = updateGhostState idx $ updateGhostPos idx $ updateGhostDir idx g
 
+updateGhostState :: Int -> PacmanGame -> PacmanGame
 updateGhostState idx g
  | state == Scared && (scaredTimer g) > 50         = g {ghostState = setAtIdx idx Normal (ghostState g)}
  | state == Returning && (x, y) == centerPos       = g {ghostState = setAtIdx idx CenterZone (ghostState g)}
@@ -236,6 +239,7 @@ updateGhostState idx g
     (x, y) = (ghostPos g) !! idx
     state = (ghostState g) !! idx
 
+updateGhostDir :: Int -> PacmanGame -> PacmanGame
 updateGhostDir idx g
  | atJunction (x, y) dir state g  = updateRandGen sg $ g {ghostDir = setAtIdx idx dir' (ghostDir g)}
  | otherwise = g
@@ -249,6 +253,7 @@ updateGhostDir idx g
     updateRandGen Nothing g = g
     updateRandGen (Just sg) g = g {gen = sg}
 
+updateGhostPos :: Int -> PacmanGame -> PacmanGame
 updateGhostPos idx g
   | canMove state (x, y) dir g = g {ghostPos = setAtIdx idx (x', y') (ghostPos g)}
   | otherwise = g
@@ -258,6 +263,7 @@ updateGhostPos idx g
     state    = (ghostState g) !! idx
     (x', y') = onTick g (state == Scared) 2 (x, y) (move (x, y) dir)
 
+atJunction :: (Int,Int) -> Direction -> PlayerState -> PacmanGame -> Bool
 atJunction (x, y) dir st g = 
   ((dir == North || dir == South) && (canMove st (x, y) East g || canMove st (x, y) West g)) ||
   ((dir == East || dir == West) && (canMove st (x, y) North g || canMove st (x, y) South g))
@@ -274,6 +280,7 @@ calculateGhostNextDir idx g
     state    = (ghostState g) !! idx
     (randDir, g') = randomDir (gen g)
 
+getTileToTarget :: Int -> PacmanGame -> (Int, Int)
 getTileToTarget idx g
  | idx == 0 = (x, y)
  | idx == 1 = (x-1, y-1)
@@ -323,16 +330,18 @@ canMove state (x, y) dir g = canMoveTo g state dir $ move (x, y) dir
 canMoveTo :: PacmanGame -> PlayerState -> Direction -> (Int, Int) -> Bool
 canMoveTo g state dir (x, y) = getTile x y g /= 'x' && not (getTile x y g == '+' && dir == South && state /= Returning)
 
+wrapx :: Int -> Int
 wrapx x
  | x < 0 = maxTileHoriz
  | x > maxTileHoriz = 0
  | otherwise = x
 
+resetGame :: PacmanGame -> PacmanGame
 resetGame g = g { pacmanPos = pacmanInitialPos, pacmanDir = pacmanInitialDir, ghostPos = [redGhostInitialPos, blueGhostInitialPos, yellowGhostInitialPos, pinkGhostInitialPos], ghostDir = replicate 4 ghostInitialDir, ghostState = replicate 4 CenterZone, seconds = 0, pacmanNextDir = None, scaredTimer = 0, countdownTimer = 3}
 
+resetGameFully :: PacmanGame -> PacmanGame
 resetGameFully g = resetGame $ g {gameState = Playing, lives = pacmanInitialLives, score = 0, level = (initialLevel g), coinCount = countCoins (initialLevel g)}
 
--- Not sure why print is required...
 initTiles = do 
   contents <- readFile "pacman.lvl"
   stdGen <- newStdGen
